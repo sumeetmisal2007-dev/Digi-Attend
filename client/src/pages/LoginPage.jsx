@@ -41,7 +41,7 @@ export default function LoginPage() {
           <img 
             src="/terna-logo.png" 
             alt="Terna Logo" 
-            style={{ height: '56px', maxWidth: '240px', objectFit: 'contain', marginBottom: '12px' }} 
+            style={{ height: '64px', maxWidth: '240px', objectFit: 'contain', marginBottom: '12px' }} 
           />
           <h1>Terna Engineering College</h1>
           <p>Digital Attendance System</p>
