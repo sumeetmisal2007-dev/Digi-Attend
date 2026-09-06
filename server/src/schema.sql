@@ -1,43 +1,85 @@
-CREATE TYPE user_role AS ENUM ('student', 'faculty', 'hod');
+-- ========== ENUMS ==========
+CREATE TYPE user_role AS ENUM ('student', 'faculty', 'hod', 'admin');
 CREATE TYPE attendance_status AS ENUM ('present', 'absent', 'late');
+CREATE TYPE session_type AS ENUM ('lecture', 'practical');
+
+-- ========== TABLES ==========
+
+CREATE TABLE IF NOT EXISTS departments (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(120) UNIQUE NOT NULL,
+  campus_lat DECIMAL(10, 7) NOT NULL,
+  campus_lng DECIMAL(10, 7) NOT NULL,
+  campus_radius_m INTEGER DEFAULT 200
+);
 
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   name VARCHAR(120) NOT NULL,
   email VARCHAR(180) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL DEFAULT '',
   role user_role NOT NULL,
-  department VARCHAR(120),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  department_id INTEGER REFERENCES departments(id),
+  year INTEGER,
+  semester INTEGER,
+  roll_number VARCHAR(30) UNIQUE,
+  device_fingerprint VARCHAR(255),
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS courses (
   id SERIAL PRIMARY KEY,
   code VARCHAR(20) UNIQUE NOT NULL,
   name VARCHAR(160) NOT NULL,
-  semester VARCHAR(20) NOT NULL,
-  faculty_id INTEGER REFERENCES users(id)
+  department_id INTEGER REFERENCES departments(id),
+  year INTEGER NOT NULL,
+  semester INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS faculty_courses (
+  faculty_id INTEGER REFERENCES users(id),
+  course_id INTEGER REFERENCES courses(id),
+  PRIMARY KEY (faculty_id, course_id)
+);
+
+CREATE TABLE IF NOT EXISTS student_courses (
+  student_id INTEGER REFERENCES users(id),
+  course_id INTEGER REFERENCES courses(id),
+  PRIMARY KEY (student_id, course_id)
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+  id SERIAL PRIMARY KEY,
+  course_id INTEGER NOT NULL REFERENCES courses(id),
+  faculty_id INTEGER NOT NULL REFERENCES users(id),
+  session_type session_type NOT NULL,
+  session_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  start_time TIME NOT NULL,
+  end_time TIME NOT NULL,
+  qr_secret VARCHAR(64) NOT NULL,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS attendance_records (
   id SERIAL PRIMARY KEY,
   student_id INTEGER NOT NULL REFERENCES users(id),
-  course_id INTEGER NOT NULL REFERENCES courses(id),
-  attendance_date DATE NOT NULL DEFAULT CURRENT_DATE,
-  status attendance_status NOT NULL,
+  session_id INTEGER NOT NULL REFERENCES sessions(id),
+  status attendance_status NOT NULL DEFAULT 'present',
+  marked_at TIMESTAMPTZ DEFAULT NOW(),
   marked_by INTEGER REFERENCES users(id),
-  UNIQUE (student_id, course_id, attendance_date)
+  scan_lat DECIMAL(10, 7),
+  scan_lng DECIMAL(10, 7),
+  device_fingerprint VARCHAR(255),
+  UNIQUE (student_id, session_id)
 );
 
-INSERT INTO users (name, email, role, department) VALUES
-  ('Aarav Mehta', 'aarav@campus.edu', 'student', 'Computer Science'),
-  ('Dr. Nisha Rao', 'nisha.rao@campus.edu', 'faculty', 'Computer Science'),
-  ('Prof. Vikram Shah', 'vikram.shah@campus.edu', 'hod', 'Computer Science')
-ON CONFLICT (email) DO NOTHING;
-
-INSERT INTO courses (code, name, semester, faculty_id)
-SELECT 'CS301', 'Database Systems', 'Semester 5', id FROM users WHERE email = 'nisha.rao@campus.edu'
-ON CONFLICT (code) DO NOTHING;
-
-INSERT INTO courses (code, name, semester, faculty_id)
-SELECT 'CS302', 'Operating Systems', 'Semester 5', id FROM users WHERE email = 'nisha.rao@campus.edu'
-ON CONFLICT (code) DO NOTHING;
+CREATE TABLE IF NOT EXISTS audit_log (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id),
+  action VARCHAR(50) NOT NULL,
+  details JSONB,
+  ip_address VARCHAR(45),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
