@@ -20,8 +20,9 @@ export default function Sidebar({ navItems }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <span className="brand-mark">T</span>
-        <span>Terna</span>
+        <div style={{ background: '#ffffff', padding: '6px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+          <img src="/terna-logo.png" alt="Terna" style={{ height: '32px', maxWidth: '100%', objectFit: 'contain' }} />
+        </div>
       </div>
 
       <div className="sidebar-user">

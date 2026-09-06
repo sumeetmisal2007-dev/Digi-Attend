@@ -38,7 +38,11 @@ export default function LoginPage() {
     <div className="login-screen">
       <div className="login-card" style={{ maxWidth: 400 }}>
         <div className="login-brand">
-          <span className="brand-mark">T</span>
+          <img 
+            src="/terna-logo.png" 
+            alt="Terna Logo" 
+            style={{ height: '56px', maxWidth: '240px', objectFit: 'contain', marginBottom: '12px' }} 
+          />
           <h1>Terna Engineering College</h1>
           <p>Digital Attendance System</p>
         </div>
