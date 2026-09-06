@@ -10,8 +10,8 @@ export async function apiFetch(path, options = {}) {
   })
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Request failed' }))
-    throw new Error(error.message || 'Request failed')
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.error || errorData.message || 'Request failed')
   }
 
   return response.json()

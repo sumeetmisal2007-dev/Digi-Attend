@@ -2,7 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import crypto from 'crypto'
-import pool from './db.js'
+import { pool } from './db.js'
 import { generateToken, validateToken } from './utils/qr.js'
 import { isWithinCampus } from './utils/geo.js'
 
@@ -17,6 +17,35 @@ const PORT = process.env.PORT || 4000
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' })
 })
+
+// === AUTH ENDPOINT ===
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const cleanUsername = (username || '').trim();
+    const cleanPassword = (password || '').trim();
+    // In case user typed letter 'O' instead of digit '0' in TU0F... or vice-versa
+    const altUsername = cleanUsername.replace(/^TUO/i, 'TU0').replace(/^tuo/i, 'tu0');
+
+    const result = await pool.query(
+      `SELECT id, name, roll_number, role, department_id, year, semester 
+       FROM users 
+       WHERE (LOWER(roll_number) = LOWER($1) OR LOWER(roll_number) = LOWER($2)) 
+         AND password = $3`,
+      [cleanUsername, altUsername, cleanPassword]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid ID Number or Password' });
+    }
+
+    const user = result.rows[0];
+    res.json({ user });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 // === FACULTY ENDPOINTS ===
 

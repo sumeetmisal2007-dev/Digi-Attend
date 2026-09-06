@@ -1,46 +1,28 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 const AuthContext = createContext(null)
 
-const mockUsers = {
-  student: {
-    id: 1,
-    name: 'Aarav Mehta',
-    email: 'aarav@campus.edu',
-    role: 'student',
-    rollNumber: 'TU4F2526035',
-    department: 'Information Technology',
-    year: 2,
-    semester: 3,
-  },
-  faculty: {
-    id: 2,
-    name: 'Dr. Nisha Rao',
-    email: 'nisha.rao@campus.edu',
-    role: 'faculty',
-    department: 'Information Technology',
-  },
-  hod: {
-    id: 3,
-    name: 'Prof. Vikram Shah',
-    email: 'vikram.shah@campus.edu',
-    role: 'hod',
-    department: 'Information Technology',
-  },
-  admin: {
-    id: 4,
-    name: 'Admin User',
-    email: 'admin@campus.edu',
-    role: 'admin',
-    department: 'Information Technology',
-  },
-}
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
+  
+  // Try to load user from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('user')
+    if (saved) {
+      setUser(JSON.parse(saved))
+    }
+  }, [])
 
-  const login = (role) => setUser(mockUsers[role])
-  const logout = () => setUser(null)
+  const login = (userData) => {
+    setUser(userData)
+    localStorage.setItem('user', JSON.stringify(userData))
+  }
+  
+  const logout = () => {
+    setUser(null)
+    localStorage.removeItem('user')
+  }
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
