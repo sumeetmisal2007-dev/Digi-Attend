@@ -2,19 +2,19 @@
 
 A role-based attendance platform for Students, Faculty, and HODs.
 
-## Stack
+## Stack (MERN)
 
-- React + Vite client
-- Node.js + Express API
-- PostgreSQL database
-- Docker Compose for local PostgreSQL
+- MongoDB (via Mongoose)
+- Express + Node.js backend API
+- React + Vite frontend
+- Docker Compose for local MongoDB
 
 ## Run locally
 
-1. Start PostgreSQL: `npm run db:up`
-2. Copy `server/.env.example` to `server/.env`.
-3. Apply the schema with `psql` or a PostgreSQL client using `server/src/schema.sql`.
-4. Install dependencies: `npm install`, `npm install --prefix server`, `npm install --prefix client`.
+1. Start MongoDB: `npm run db:up` (or set `MONGODB_URI` in `backend/.env`)
+2. Copy `backend/.env.example` to `backend/.env`.
+3. Install dependencies: `npm install`, `npm install --prefix backend`, `npm install --prefix frontend`.
+4. Seed database: `npm run seed` (or auto-seeds on first startup).
 5. Start both applications: `npm run dev`.
 6. Open `http://localhost:5173`.
 

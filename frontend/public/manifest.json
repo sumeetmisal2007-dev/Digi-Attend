@@ -1,0 +1,19 @@
+{
+  "short_name": "Terna Digi",
+  "name": "Terna Digital Attendance & Academic Tracking",
+  "description": "Geo-verified attendance, anti-proxy hardware verification, and official defaulter monitoring for Terna Engineering College.",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1d2f",
+  "theme_color": "#0f1d2f",
+  "icons": [
+    {
+      "src": "/terna-logo.png",
+      "type": "image/png",
+      "sizes": "192x192 512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}

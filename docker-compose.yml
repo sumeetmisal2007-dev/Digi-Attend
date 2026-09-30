@@ -1,16 +1,12 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: digital-attendance-db
+  mongodb:
+    image: mongo:latest
+    container_name: digital-attendance-mongo
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: attendance
-      POSTGRES_USER: attendance_user
-      POSTGRES_PASSWORD: attendance_password
     ports:
-      - "5432:5432"
+      - "27017:27017"
     volumes:
-      - attendance_pgdata:/var/lib/postgresql/data
+      - attendance_mongodata:/data/db
 
 volumes:
-  attendance_pgdata:
+  attendance_mongodata:

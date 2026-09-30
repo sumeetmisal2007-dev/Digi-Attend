@@ -1,0 +1,24 @@
+{
+  "name": "digital-attendance-backend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon --env-file=.env src/index.js",
+    "start": "node --env-file=.env src/index.js",
+    "seed": "node --env-file=.env src/seed.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^8.7.0",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongodb-memory-server": "^11.2.0",
+    "mongoose": "^9.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}

@@ -3,11 +3,12 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
-    "build": "npm run build --prefix client",
-    "start": "npm run start --prefix server",
-    "db:up": "docker compose up -d postgres",
-    "db:down": "docker compose down"
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "build": "npm run build --prefix frontend",
+    "start": "npm run start --prefix backend",
+    "db:up": "docker compose up -d mongodb",
+    "db:down": "docker compose down",
+    "seed": "npm run seed --prefix backend"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
