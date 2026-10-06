@@ -29,10 +29,15 @@ const PORTALS = {
     idPlaceholder: 'e.g. TU4F2526001',
     passwordPlaceholder: 'Tu4@f2526001',
     demo: {
-      username: 'TU4F2526001',
-      password: 'Tu4@f2526001',
-      label: 'Shivani Karmat (Student)'
+      username: 'TU4F2526030',
+      password: 'Tu4@f2526030',
+      label: 'Kamble Sanchi Maroti'
     },
+    quickStudents: [
+      { id: 'TU4F2526030', pass: 'Tu4@f2526030', name: 'Sanchi Kamble' },
+      { id: 'TU4F2526035', pass: 'Tu4@f2526035', name: 'Siddhesh Choudhari' },
+      { id: 'TU4F2526039', pass: 'Tu4@f2526039', name: 'Sumeet Misal' }
+    ],
     features: ['Real-time Attendance %', 'Geo-verified QR Scanner', 'Semester 3 Subjects']
   },
   faculty: {
@@ -322,11 +327,41 @@ export default function LoginPage() {
               Auto-fill demo
             </button>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569', fontSize: '11.5px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569', fontSize: '11.5px', marginBottom: currentPortal.quickStudents ? '8px' : 0 }}>
             <span><strong>User:</strong> {currentPortal.demo.username}</span>
             <span><strong>Pass:</strong> {currentPortal.demo.password}</span>
             <span><em>({currentPortal.demo.label})</em></span>
           </div>
+
+          {currentPortal.quickStudents && (
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px', paddingTop: '6px', borderTop: '1px dashed #cbd5e1' }}>
+              <span style={{ fontSize: '11px', color: '#64748b', alignSelf: 'center' }}>Integrated students:</span>
+              {currentPortal.quickStudents.map(qs => (
+                <button
+                  key={qs.id}
+                  type="button"
+                  onClick={() => {
+                    setUsername(qs.id)
+                    setPassword(qs.pass)
+                    setError('')
+                    setExpectedRole(null)
+                  }}
+                  style={{
+                    padding: '3px 8px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    borderRadius: '4px',
+                    border: '1px solid #bae6fd',
+                    background: '#f0f9ff',
+                    color: '#0284c7',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {qs.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

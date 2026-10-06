@@ -19,7 +19,7 @@ export const authenticate = (req, res, next) => {
   const token = authHeader.slice(7).trim()
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET)
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] })
     req.user = decoded
     next()
   } catch (err) {

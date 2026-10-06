@@ -56,9 +56,15 @@ const sharedClassRoutes = (
   </>
 )
 
-function RequireAuth({ children }) {
+function RequireRole({ allowedRoles = [], children }) {
   const { user } = useAuth()
-  if (!user) return <Navigate to="/" replace />
+  if (!user) return <Navigate to="/login" replace />
+
+  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+    // Redirect to user's authorized portal if role does not match
+    return <Navigate to={`/${user.role}`} replace />
+  }
+
   return children
 }
 
@@ -71,26 +77,26 @@ export default function App() {
         <Route path="/login/:portalRole" element={<LoginPage />} />
 
         {/* Student routes */}
-        <Route path="/student" element={<RequireAuth><AppLayout navItems={studentNav} /></RequireAuth>}>
+        <Route path="/student" element={<RequireRole allowedRoles={['student']}><AppLayout navItems={studentNav} /></RequireRole>}>
           <Route index element={<StudentDashboard />} />
           <Route path="analysis" element={<StudentAnalysis />} />
           <Route path="scan" element={<StudentScanner />} />
         </Route>
 
         {/* Faculty routes */}
-        <Route path="/faculty" element={<RequireAuth><AppLayout navItems={facultyNav} /></RequireAuth>}>
+        <Route path="/faculty" element={<RequireRole allowedRoles={['faculty', 'hod', 'admin']}><AppLayout navItems={facultyNav} /></RequireRole>}>
           <Route index element={<FacultyDashboard />} />
           {sharedClassRoutes}
         </Route>
 
         {/* HOD routes */}
-        <Route path="/hod" element={<RequireAuth><AppLayout navItems={hodNav} /></RequireAuth>}>
+        <Route path="/hod" element={<RequireRole allowedRoles={['hod', 'admin']}><AppLayout navItems={hodNav} /></RequireRole>}>
           <Route index element={<HodDashboard />} />
           {sharedClassRoutes}
         </Route>
 
         {/* Admin routes */}
-        <Route path="/admin" element={<RequireAuth><AppLayout navItems={adminNav} /></RequireAuth>}>
+        <Route path="/admin" element={<RequireRole allowedRoles={['admin']}><AppLayout navItems={adminNav} /></RequireRole>}>
           <Route index element={<AdminDashboard />} />
           <Route path="students" element={<ManageStudents />} />
           <Route path="courses" element={<ManageCourses />} />

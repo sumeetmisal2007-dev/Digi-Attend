@@ -22,12 +22,28 @@ export const isWithinCampus = (studentLat, studentLng, campusLat, campusLng, rad
   haversineDistance(studentLat, studentLng, campusLat, campusLng) <= radiusMeters
 
 export function verifyCampusGeofence(studentLat, studentLng, campusLat = 19.0330, campusLng = 73.0297, radiusMeters = 200) {
-  const distance = haversineDistance(Number(studentLat), Number(studentLng), Number(campusLat), Number(campusLng))
-  const isAllowed = distance <= radiusMeters
+  const sLat = Number(studentLat)
+  const sLng = Number(studentLng)
+  const cLat = Number(campusLat)
+  const cLng = Number(campusLng)
+
+  if (!Number.isFinite(sLat) || !Number.isFinite(sLng) || sLat < -90 || sLat > 90 || sLng < -180 || sLng > 180) {
+    return {
+      isAllowed: false,
+      distance: null,
+      radiusMeters,
+      error: 'Invalid or out-of-range GPS coordinates',
+      campusCoordinates: { lat: cLat, lng: cLng }
+    }
+  }
+
+  const distance = haversineDistance(sLat, sLng, cLat, cLng)
+  const isAllowed = Number.isFinite(distance) && distance <= radiusMeters
+
   return {
     isAllowed,
     distance: Math.round(distance),
     radiusMeters,
-    campusCoordinates: { lat: campusLat, lng: campusLng }
+    campusCoordinates: { lat: cLat, lng: cLng }
   }
 }

@@ -16,9 +16,26 @@ export function generateToken(secret, offset = 0) {
 }
 
 /**
- * Validate a scanned token against the session secret.
- * Checks current time window AND previous window.
+ * Validate a scanned token against the session secret using timing-safe comparison.
+ * Checks current time window AND adjacent window (to allow for minor clock skew).
  */
 export function validateToken(secret, token) {
-  return token === generateToken(secret, 0) || token === generateToken(secret, 1)
+  if (typeof secret !== 'string' || typeof token !== 'string' || token.length !== 16) {
+    return false
+  }
+
+  const tokenBuf = Buffer.from(token, 'utf8')
+
+  // Check current window (0) and previous window (1)
+  const candidateWindows = [0, 1]
+
+  for (const offset of candidateWindows) {
+    const candidate = generateToken(secret, offset)
+    const candidateBuf = Buffer.from(candidate, 'utf8')
+    if (tokenBuf.length === candidateBuf.length && crypto.timingSafeEqual(tokenBuf, candidateBuf)) {
+      return true
+    }
+  }
+
+  return false
 }

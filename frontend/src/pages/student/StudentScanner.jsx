@@ -160,6 +160,10 @@ export default function StudentScanner() {
         throw new Error('Invalid QR code format. Please scan a valid session QR.')
       }
 
+      if (!location?.lat || !location?.lng) {
+        throw new Error('GPS coordinates not acquired. Please tap "Verify GPS & Open Scanner" first.')
+      }
+
       const devId = getOrCreateDeviceId()
       const res = await apiFetch('/attendance/scan', {
         method: 'POST',
@@ -167,8 +171,8 @@ export default function StudentScanner() {
           student_id: user.id,
           session_id: sessionId,
           token: token,
-          lat: location?.lat || 19.0330,
-          lng: location?.lng || 73.0297,
+          lat: location.lat,
+          lng: location.lng,
           device_id: devId,
           device_fingerprint: devId
         })

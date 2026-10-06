@@ -67,6 +67,10 @@ export const AttendanceRecord = mongoose.model('AttendanceRecord', new mongoose.
 }, schemaOptions))
 
 AttendanceRecord.schema.index({ student_id: 1, session_id: 1 }, { unique: true })
+AttendanceRecord.schema.index({ session_id: 1 })
+Session.schema.index({ session_date: 1 })
+Session.schema.index({ faculty_id: 1 })
+Session.schema.index({ course_id: 1 })
 
 export const NotificationLog = mongoose.model('NotificationLog', new mongoose.Schema({
   student_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },

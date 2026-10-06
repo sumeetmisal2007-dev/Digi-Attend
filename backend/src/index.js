@@ -16,8 +16,11 @@ const app = express()
 
 // === TIER 1 SECURITY: HELMET HTTP SECURITY HEADERS ===
 app.use(helmet({
-  contentSecurityPolicy: false, // Disabled in local dev to permit Vite scripts & Google Fonts
-  crossOriginEmbedderPolicy: false
+  contentSecurityPolicy: false, // Permitted in local dev for Vite scripts and fonts
+  crossOriginEmbedderPolicy: false,
+  frameguard: { action: 'deny' }, // Anti-clickjacking protection
+  dnsPrefetchControl: { allow: false },
+  referrerPolicy: { policy: 'same-origin' }
 }))
 
 // === TIER 1 SECURITY: STRICT CORS POLICY ===
@@ -43,6 +46,35 @@ app.use(cors({
 
 app.use(express.json({ limit: '1mb' }))
 
+// === TIER 1 SECURITY: NOSQL INJECTION & PARAMETER SANITIZATION ===
+function sanitizeNoSQL(obj) {
+  if (!obj || typeof obj !== 'object') return obj
+  for (const key of Object.keys(obj)) {
+    if (key.startsWith('$') || key.includes('.')) {
+      delete obj[key]
+    } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+      sanitizeNoSQL(obj[key])
+    }
+  }
+  return obj
+}
+
+app.use((req, res, next) => {
+  if (req.body) sanitizeNoSQL(req.body)
+  if (req.query) sanitizeNoSQL(req.query)
+  if (req.params) sanitizeNoSQL(req.params)
+  next()
+})
+
+// Validation helper for MongoDB ObjectId parameters
+import mongoose from 'mongoose'
+const validateObjectId = (req, res, next) => {
+  if (req.params.id && !mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ error: 'Invalid identifier format' })
+  }
+  next()
+}
+
 // === TIER 1 SECURITY: RATE LIMITING ===
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -67,6 +99,22 @@ const scanLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Excessive attendance scan attempts detected. Please wait 1 minute before retrying.' }
+})
+
+const sessionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many session operations from this IP. Please try again later.' }
+})
+
+const notifyLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many notification requests. Please wait 5 minutes before retrying.' }
 })
 
 const PORT = process.env.PORT || 4000
@@ -142,6 +190,10 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
       return res.status(401).json({ error: 'Invalid ID Number or Password' })
     }
 
+    if (user.is_active === false) {
+      return res.status(403).json({ error: 'This account has been deactivated. Please contact your department administrator.' })
+    }
+
     if (requestedRole && user.role !== requestedRole) {
       const roleTitles = {
         student: 'Student',
@@ -165,7 +217,7 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
         batch: user.batch
       },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '7d', algorithm: 'HS256' }
     )
 
     const userData = user.toJSON()
@@ -224,7 +276,7 @@ app.post('/api/courses', authenticate, authorize(['admin']), async (req, res) =>
 })
 
 // Update course (Admin only)
-app.put('/api/courses/:id', authenticate, authorize(['admin']), async (req, res) => {
+app.put('/api/courses/:id', authenticate, authorize(['admin']), validateObjectId, async (req, res) => {
   try {
     const { name, year, semester, faculty_ids } = req.body
     const update = {}
@@ -256,8 +308,12 @@ app.get('/api/faculty', authenticate, authorize(['faculty', 'hod', 'admin']), as
 // === FACULTY ENDPOINTS ===
 
 // Get courses assigned to a faculty
-app.get('/api/faculty/:id/courses', authenticate, authorize(['faculty', 'hod', 'admin']), async (req, res) => {
+app.get('/api/faculty/:id/courses', authenticate, authorize(['faculty', 'hod', 'admin']), validateObjectId, async (req, res) => {
   try {
+    if (req.user.role === 'faculty' && req.user.id !== req.params.id) {
+      return res.status(403).json({ error: 'Access denied: You may only view courses assigned to your own account.' })
+    }
+
     const courses = await Course.find({ faculty_ids: req.params.id })
     res.json(courses)
   } catch (err) {
@@ -267,8 +323,12 @@ app.get('/api/faculty/:id/courses', authenticate, authorize(['faculty', 'hod', '
 })
 
 // Faculty Dashboard Overview (Live Statistics & Today's/Recent Sessions)
-app.get('/api/faculty/:id/dashboard', authenticate, authorize(['faculty', 'hod', 'admin']), async (req, res) => {
+app.get('/api/faculty/:id/dashboard', authenticate, authorize(['faculty', 'hod', 'admin']), validateObjectId, async (req, res) => {
   try {
+    if (req.user.role === 'faculty' && req.user.id !== req.params.id) {
+      return res.status(403).json({ error: 'Access denied: You may only view your own faculty dashboard.' })
+    }
+
     const faculty = await User.findById(req.params.id)
     if (!faculty) return res.status(404).json({ error: 'Faculty not found' })
 
@@ -333,8 +393,12 @@ app.get('/api/faculty/:id/dashboard', authenticate, authorize(['faculty', 'hod',
 })
 
 // Get sessions list for a faculty (for selecting session in Edit Attendance)
-app.get('/api/faculty/:id/sessions', authenticate, authorize(['faculty', 'hod', 'admin']), async (req, res) => {
+app.get('/api/faculty/:id/sessions', authenticate, authorize(['faculty', 'hod', 'admin']), validateObjectId, async (req, res) => {
   try {
+    if (req.user.role === 'faculty' && req.user.id !== req.params.id) {
+      return res.status(403).json({ error: 'Access denied: You may only view teaching sessions for your own account.' })
+    }
+
     const sessions = await Session.find({ faculty_id: req.params.id })
       .populate('course_id')
       .sort({ session_date: -1, start_time: -1 })
@@ -357,7 +421,7 @@ app.get('/api/faculty/:id/sessions', authenticate, authorize(['faculty', 'hod', 
 })
 
 // Get complete student attendance roster for a specific session
-app.get('/api/sessions/:id/attendance', authenticate, authorize(['faculty', 'hod', 'admin']), async (req, res) => {
+app.get('/api/sessions/:id/attendance', authenticate, authorize(['faculty', 'hod', 'admin']), validateObjectId, async (req, res) => {
   try {
     const session = await Session.findById(req.params.id).populate('course_id')
     if (!session) return res.status(404).json({ error: 'Session not found' })
@@ -422,7 +486,7 @@ app.get('/api/sessions/:id/attendance', authenticate, authorize(['faculty', 'hod
 })
 
 // Update student attendance status for a session (supports single or array of updates)
-app.put('/api/sessions/:id/attendance', authenticate, authorize(['faculty', 'hod', 'admin']), async (req, res) => {
+app.put('/api/sessions/:id/attendance', authenticate, authorize(['faculty', 'hod', 'admin']), validateObjectId, async (req, res) => {
   try {
     const { updates } = req.body // array of { student_id, status }
     if (!Array.isArray(updates) || updates.length === 0) {
@@ -431,6 +495,11 @@ app.put('/api/sessions/:id/attendance', authenticate, authorize(['faculty', 'hod
 
     const session = await Session.findById(req.params.id)
     if (!session) return res.status(404).json({ error: 'Session not found' })
+
+    // BOLA check: Faculty can only modify attendance for their own sessions
+    if (req.user.role === 'faculty' && session.faculty_id.toString() !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied: You may only modify attendance for sessions you conducted.' })
+    }
 
     const bulkOps = updates.map(u => ({
       updateOne: {
@@ -454,14 +523,17 @@ app.put('/api/sessions/:id/attendance', authenticate, authorize(['faculty', 'hod
 })
 
 // Create a new session with Practical Batch support (all, A1, A2)
-app.post('/api/sessions', authenticate, authorize(['faculty', 'hod', 'admin']), async (req, res) => {
+app.post('/api/sessions', sessionLimiter, authenticate, authorize(['faculty', 'hod', 'admin']), async (req, res) => {
   try {
     const { course_id, faculty_id, session_type, batch = 'all', session_date, start_time, end_time } = req.body
+    
+    // Ensure faculty only creates sessions for themselves unless HOD or Admin
+    const targetFacultyId = req.user.role === 'faculty' ? req.user.id : (faculty_id || req.user.id)
     const qr_secret = crypto.randomBytes(32).toString('hex')
 
     const session = await Session.create({
       course_id,
-      faculty_id,
+      faculty_id: targetFacultyId,
       session_type,
       batch: session_type === 'practical' ? (batch || 'all') : 'all',
       session_date,
@@ -471,19 +543,25 @@ app.post('/api/sessions', authenticate, authorize(['faculty', 'hod', 'admin']), 
       is_active: true
     })
 
-    res.json({ id: session._id, qr_secret, batch: session.batch })
+    // Secure response: do not expose qr_secret over the wire
+    res.status(201).json({ id: session._id, batch: session.batch })
   } catch (err) {
     console.error(err)
-    res.status(500).json({ error: 'Server error' })
+    res.status(500).json({ error: 'Server error creating session' })
   }
 })
 
 // Get session details and current QR token
-app.get('/api/sessions/:id/qr', authenticate, authorize(['faculty', 'hod', 'admin']), async (req, res) => {
+app.get('/api/sessions/:id/qr', authenticate, authorize(['faculty', 'hod', 'admin']), validateObjectId, async (req, res) => {
   try {
     const session = await Session.findById(req.params.id).populate('course_id')
     if (!session) {
       return res.status(404).json({ error: 'Session not found' })
+    }
+
+    // BOLA check: Faculty can only launch QR for their own sessions
+    if (req.user.role === 'faculty' && session.faculty_id.toString() !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied: You may only display QR codes for sessions you teach.' })
     }
 
     const token = generateToken(session.qr_secret)
@@ -502,7 +580,7 @@ app.get('/api/sessions/:id/qr', authenticate, authorize(['faculty', 'hod', 'admi
     })
   } catch (err) {
     console.error(err)
-    res.status(500).json({ error: 'Server error' })
+    res.status(500).json({ error: 'Server error loading session QR' })
   }
 })
 
@@ -539,6 +617,10 @@ app.post('/api/attendance/scan', scanLimiter, authenticate, authorize(['student'
     const student = await User.findById(student_id)
     if (!student) {
       return res.status(404).json({ error: 'Student not found' })
+    }
+
+    if (student.is_active === false) {
+      return res.status(403).json({ error: 'Your account is deactivated. Attendance cannot be marked.' })
     }
 
     const session = await Session.findById(session_id).populate({
@@ -579,13 +661,15 @@ app.post('/api/attendance/scan', scanLimiter, authenticate, authorize(['student'
       }
     }
 
-    if (!lat || !lng) {
-      return res.status(400).json({ error: 'Location data (GPS) is required for attendance validation' })
+    const numLat = Number(lat)
+    const numLng = Number(lng)
+    if (!Number.isFinite(numLat) || !Number.isFinite(numLng) || numLat < -90 || numLat > 90 || numLng < -180 || numLng > 180) {
+      return res.status(400).json({ error: 'Invalid or missing GPS coordinates for geofence validation' })
     }
 
     const dept = session.course_id?.department_id
     if (dept) {
-      const geoCheck = verifyCampusGeofence(lat, lng, dept.campus_lat, dept.campus_lng, dept.campus_radius_m)
+      const geoCheck = verifyCampusGeofence(numLat, numLng, dept.campus_lat, dept.campus_lng, dept.campus_radius_m)
       if (!geoCheck.isAllowed) {
         return res.status(403).json({ 
           error: `Geofence Violation: You are ${geoCheck.distance}m away from campus. Attendance must be marked within ${geoCheck.radiusMeters}m of campus perimeter.`,
@@ -603,8 +687,8 @@ app.post('/api/attendance/scan', scanLimiter, authenticate, authorize(['student'
       { student_id, session_id },
       {
         status: 'present',
-        scan_lat: lat,
-        scan_lng: lng,
+        scan_lat: numLat,
+        scan_lng: numLng,
         device_id: clientDevice,
         device_fingerprint: clientDevice,
         marked_at: new Date()
@@ -624,8 +708,12 @@ app.post('/api/attendance/scan', scanLimiter, authenticate, authorize(['student'
 })
 
 // Get student monthly attendance analysis (separate Lectures & Practicals for a chosen month)
-app.get('/api/student/:id/monthly-analysis', authenticate, async (req, res) => {
+app.get('/api/student/:id/monthly-analysis', authenticate, validateObjectId, async (req, res) => {
   try {
+    if (req.user.role === 'student' && req.user.id !== req.params.id) {
+      return res.status(403).json({ error: 'Access denied: You may only view your own monthly attendance analysis.' })
+    }
+
     const student = await User.findById(req.params.id)
     if (!student) {
       return res.status(404).json({ error: 'Student not found' })
@@ -893,7 +981,7 @@ app.get('/api/hod/monthly-defaulters', authenticate, authorize(['hod', 'admin'])
 })
 
 // Trigger Automated Defaulter Alerts (WhatsApp Direct Alert & Email Warning Center)
-app.post('/api/hod/notify-defaulters', authenticate, authorize(['hod', 'admin']), async (req, res) => {
+app.post('/api/hod/notify-defaulters', notifyLimiter, authenticate, authorize(['hod', 'admin']), async (req, res) => {
   try {
     const { month = '2026-09', channel = 'whatsapp', threshold = 75, defaulterIds = [] } = req.body
 
@@ -908,9 +996,10 @@ app.post('/api/hod/notify-defaulters', authenticate, authorize(['hod', 'admin'])
       student_id: sId,
       channel,
       month,
-      percentage: 62.5,
+      percentage: threshold,
       status: 'sent',
       message: `Official Defaulter Alert: Attendance below ${threshold}% in ${month}. Contact HOD IT immediately.`,
+      sent_by: req.user.id,
       sent_at: new Date()
     }))
 
@@ -932,8 +1021,12 @@ app.post('/api/hod/notify-defaulters', authenticate, authorize(['hod', 'admin'])
 })
 
 // Get student dashboard stats (live for current month)
-app.get('/api/student/:id/stats', authenticate, async (req, res) => {
+app.get('/api/student/:id/stats', authenticate, validateObjectId, async (req, res) => {
   try {
+    if (req.user.role === 'student' && req.user.id !== req.params.id) {
+      return res.status(403).json({ error: 'Access denied: You may only view your own statistics.' })
+    }
+
     const student = await User.findById(req.params.id)
     if (!student) return res.status(404).json({ error: 'Student not found' })
 
@@ -1060,7 +1153,7 @@ app.post('/api/students', authenticate, authorize(['admin']), async (req, res) =
 })
 
 // Update student (Admin only)
-app.put('/api/students/:id', authenticate, authorize(['admin']), async (req, res) => {
+app.put('/api/students/:id', authenticate, authorize(['admin']), validateObjectId, async (req, res) => {
   try {
     const { name, roll_number, year, semester, batch, is_active } = req.body
     const update = {}
@@ -1082,7 +1175,7 @@ app.put('/api/students/:id', authenticate, authorize(['admin']), async (req, res
 })
 
 // Reset student's single-device binding (Admin & HOD recovery action)
-app.post('/api/students/:id/reset-device', authenticate, authorize(['admin', 'hod']), async (req, res) => {
+app.post('/api/students/:id/reset-device', authenticate, authorize(['admin', 'hod']), validateObjectId, async (req, res) => {
   try {
     const student = await User.findByIdAndUpdate(
       req.params.id,
@@ -1103,16 +1196,34 @@ app.post('/api/students/:id/reset-device', authenticate, authorize(['admin', 'ho
   }
 })
 
-// Delete student (Admin only)
-app.delete('/api/students/:id', authenticate, authorize(['admin']), async (req, res) => {
+// Delete student with cascade removal of records (Admin only)
+app.delete('/api/students/:id', authenticate, authorize(['admin']), validateObjectId, async (req, res) => {
   try {
     const student = await User.findByIdAndDelete(req.params.id)
     if (!student) return res.status(404).json({ error: 'Student not found' })
-    res.json({ success: true, message: 'Student removed successfully' })
+
+    // Cascade delete related records to prevent orphaned documents
+    await AttendanceRecord.deleteMany({ student_id: req.params.id })
+    await NotificationLog.deleteMany({ student_id: req.params.id })
+
+    res.json({ success: true, message: 'Student and related records removed successfully' })
   } catch (err) {
     console.error('Delete student error:', err)
     res.status(500).json({ error: 'Server error deleting student' })
   }
+})
+
+// === 404 CATCH-ALL FOR UNDEFINED API ROUTES ===
+app.use((req, res) => {
+  res.status(404).json({ error: `API route not found: ${req.method} ${req.originalUrl}` })
+})
+
+// === CENTRALIZED ERROR HANDLER ===
+app.use((err, req, res, next) => {
+  console.error('Unhandled server error:', err)
+  res.status(err.status || 500).json({
+    error: 'Internal server error occurred. Please try again later.'
+  })
 })
 
 await connectDB()
