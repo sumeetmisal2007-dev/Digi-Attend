@@ -217,6 +217,20 @@ export async function seedDatabase(force = false) {
   const createdSessions = []
   const attendanceRecordsToInsert = []
 
+  // Specific target students for integrated attendance
+  const targetRollNumbers = new Set(['TU4F2526030', 'TU4F2526035', 'TU4F2526039'])
+  const targetNames = [
+    'KAMBLE SANCHI MAROTI',
+    'CHOUDHARI SIDDHESH DATTATRAY',
+    'MISAL SUMEET RAMESH'
+  ]
+
+  const isTargetStudent = (student) => {
+    if (targetRollNumbers.has(student.roll_number?.trim().toUpperCase())) return true
+    const norm = (student.name || '').trim().toUpperCase()
+    return targetNames.some(t => norm.includes(t) || t.includes(norm))
+  }
+
   for (const [month, dates] of Object.entries(datesByMonth)) {
     for (const date of dates) {
       for (const tpl of sessionTemplates) {
@@ -238,43 +252,26 @@ export async function seedDatabase(force = false) {
         })
         createdSessions.push(session)
 
-        // Seed attendance for students
-        allCreatedStudents.forEach((student, studentIdx) => {
+        // Integrate attendance for the three students (Kamble Sanchi Maroti, Choudhari Siddhesh Dattatray, Misal Sumeet Ramesh)
+        // Attendance for all other students is strictly nil (no attendance records created).
+        // Zero random input used (deterministic campus coordinates and device signatures).
+        allCreatedStudents.forEach((student) => {
+          if (!isTargetStudent(student)) return
+
           // If practical session is for a specific batch (A1 or A2), only students in that batch are eligible
           if (tpl.type === 'practical' && tpl.batch && tpl.batch !== 'all') {
             if (student.batch !== tpl.batch) return
           }
-          // Specific attendance profiles:
-          // Student 0 (TU4F2526001): ~80% attendance (Eligible, > 75%)
-          // Student 1 (TU4F2526002): ~60% attendance (Defaulter, < 75%)
-          // Student 2 (TU4F2526003): ~90% attendance (Excellent)
-          // Student 3 (TU4F2526004): ~52% attendance (Defaulter, < 75%)
-          let attendanceProbability = 0.80
-          if (studentIdx === 0) attendanceProbability = 0.82
-          else if (studentIdx === 1) attendanceProbability = 0.62
-          else if (studentIdx === 2) attendanceProbability = 0.94
-          else if (studentIdx === 3) attendanceProbability = 0.54
-          else {
-            // deterministic pseudo-random rate per student based on index
-            const rates = [0.88, 0.72, 0.65, 0.91, 0.58, 0.83, 0.76, 0.69, 0.95, 0.61]
-            attendanceProbability = rates[studentIdx % rates.length]
-          }
 
-          // Deterministic attendance hashing so counts are stable
-          const hashVal = ((studentIdx * 37) + (dates.indexOf(date) * 19) + (tpl.courseCode.charCodeAt(2) * 7) + (tpl.type === 'lecture' ? 11 : 23)) % 100
-          const isPresent = hashVal < (attendanceProbability * 100)
-
-          if (isPresent) {
-            attendanceRecordsToInsert.push({
-              student_id: student._id,
-              session_id: session._id,
-              status: 'present',
-              scan_lat: 19.0330 + ((Math.random() - 0.5) * 0.001),
-              scan_lng: 73.0297 + ((Math.random() - 0.5) * 0.001),
-              device_fingerprint: `fp_${student._id.toString().slice(-4)}`,
-              marked_at: new Date(`${date}T${tpl.startTime}:00Z`)
-            })
-          }
+          attendanceRecordsToInsert.push({
+            student_id: student._id,
+            session_id: session._id,
+            status: 'present',
+            scan_lat: dept.campus_lat,
+            scan_lng: dept.campus_lng,
+            device_fingerprint: `fp_${student.roll_number.toLowerCase()}`,
+            marked_at: new Date(`${date}T${tpl.startTime}:00Z`)
+          })
         })
       }
     }

@@ -675,6 +675,11 @@ app.get('/api/student/:id/monthly-analysis', authenticate, async (req, res) => {
       const course = session.course_id
       if (!course) return
 
+      // Batch restriction: If practical session is designated for a specific batch (A1 or A2), only students in that batch are eligible
+      if (session.session_type === 'practical' && session.batch && session.batch !== 'all') {
+        if (student.batch && student.batch !== session.batch) return
+      }
+
       const isPractical = session.session_type === 'practical'
       const targetMap = isPractical ? practicalMap : lectureMap
       const key = `${course.code}_${session.session_type}`
@@ -805,14 +810,24 @@ app.get('/api/hod/monthly-defaulters', authenticate, authorize(['hod', 'admin'])
     const studentRoster = students.map(st => {
       const sId = st._id.toString()
       const counts = studentAttendance[sId] || { total: 0, lecture: 0, practical: 0 }
-      const overallPct = totalSessionsConducted > 0 
-        ? Number(((counts.total / totalSessionsConducted) * 100).toFixed(1))
+      const stBatch = st.batch || 'A1'
+
+      // Calculate sessions conducted specifically for this student's batch
+      const studentEligibleSessions = sessions.filter(s => 
+        s.session_type === 'lecture' || s.batch === 'all' || s.batch === stBatch
+      )
+      const studentTotalConducted = studentEligibleSessions.length
+      const studentLectureConducted = studentEligibleSessions.filter(s => s.session_type === 'lecture').length
+      const studentPracticalConducted = studentEligibleSessions.filter(s => s.session_type === 'practical').length
+
+      const overallPct = studentTotalConducted > 0 
+        ? Number(((counts.total / studentTotalConducted) * 100).toFixed(1))
         : 0
-      const lecturePct = lectureSessionsCount > 0 
-        ? Number(((counts.lecture / lectureSessionsCount) * 100).toFixed(1))
+      const lecturePct = studentLectureConducted > 0 
+        ? Number(((counts.lecture / studentLectureConducted) * 100).toFixed(1))
         : 0
-      const practicalPct = practicalSessionsCount > 0 
-        ? Number(((counts.practical / practicalSessionsCount) * 100).toFixed(1))
+      const practicalPct = studentPracticalConducted > 0 
+        ? Number(((counts.practical / studentPracticalConducted) * 100).toFixed(1))
         : 0
 
       const isDefaulter = overallPct < threshold
@@ -820,9 +835,9 @@ app.get('/api/hod/monthly-defaulters', authenticate, authorize(['hod', 'admin'])
         id: st._id,
         name: st.name,
         roll_number: st.roll_number,
-        batch: st.batch || 'A1',
+        batch: stBatch,
         attended: counts.total,
-        total: totalSessionsConducted,
+        total: studentTotalConducted,
         percentage: overallPct,
         lecturePercentage: lecturePct,
         practicalPercentage: practicalPct,
@@ -922,8 +937,17 @@ app.get('/api/student/:id/stats', authenticate, async (req, res) => {
     const student = await User.findById(req.params.id)
     if (!student) return res.status(404).json({ error: 'Student not found' })
 
-    const totalSessions = await Session.countDocuments({ session_date: { $regex: '^2026-09' } })
-    const sessionIds = (await Session.find({ session_date: { $regex: '^2026-09' } }).select('_id')).map(s => s._id)
+    const stBatch = student.batch || 'A1'
+    const sessionFilter = {
+      session_date: { $regex: '^2026-09' },
+      $or: [
+        { session_type: 'lecture' },
+        { batch: 'all' },
+        { batch: stBatch }
+      ]
+    }
+    const totalSessions = await Session.countDocuments(sessionFilter)
+    const sessionIds = (await Session.find(sessionFilter).select('_id')).map(s => s._id)
     const attendedSessions = await AttendanceRecord.countDocuments({
       student_id: student._id,
       session_id: { $in: sessionIds },
