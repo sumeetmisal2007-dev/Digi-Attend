@@ -8,12 +8,12 @@ import { Department, User, Course, Session, AttendanceRecord } from './models.js
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export async function seedDatabase(force = false) {
-  const hasUpdatedFaculty = await User.findOne({ name: 'Dakshata Argade' })
-  if (!force && hasUpdatedFaculty) {
+  const hasEDLab = await Course.findOne({ code: 'IT305L' })
+  if (!force && hasEDLab) {
     const sessionCount = await Session.countDocuments()
     const facultyCount = await User.countDocuments({ role: { $in: ['faculty', 'hod'] } })
     const courseCount = await Course.countDocuments()
-    if (sessionCount >= 50 && facultyCount >= 10 && courseCount >= 10) return
+    if (sessionCount >= 50 && facultyCount >= 10 && courseCount >= 12) return
   }
 
   console.log('Seeding MongoDB database with updated faculty and course assignments...')
@@ -169,8 +169,24 @@ export async function seedDatabase(force = false) {
       faculty_ids: [preeti._id]
     },
     {
+      code: 'IT305L',
+      name: 'ED Lab (Entrepreneurship Development Practical)',
+      department_id: dept._id,
+      year: 2,
+      semester: 3,
+      faculty_ids: [preeti._id]
+    },
+    {
       code: 'IT306',
       name: 'Engineering for Sustainability (ES)',
+      department_id: dept._id,
+      year: 2,
+      semester: 3,
+      faculty_ids: [subriya._id]
+    },
+    {
+      code: 'IT306L',
+      name: 'ES Lab (Engineering for Sustainability Practical)',
       department_id: dept._id,
       year: 2,
       semester: 3,
@@ -219,8 +235,10 @@ export async function seedDatabase(force = false) {
     { courseCode: 'IT303L', type: 'practical', batch: 'A2', facultyId: smita._id, startTime: '11:15', endTime: '13:15' },
     { courseCode: 'IT304L', type: 'practical', batch: 'A1', facultyId: sayali._id, startTime: '09:00', endTime: '11:00' },
     { courseCode: 'IT304L', type: 'practical', batch: 'A2', facultyId: sayali._id, startTime: '11:15', endTime: '13:15' },
-    { courseCode: 'IT305', type: 'practical', batch: 'all', facultyId: preeti._id, startTime: '11:15', endTime: '13:15' },
-    { courseCode: 'IT306', type: 'practical', batch: 'all', facultyId: subriya._id, startTime: '14:00', endTime: '16:00' },
+    { courseCode: 'IT305L', type: 'practical', batch: 'A1', facultyId: preeti._id, startTime: '11:15', endTime: '13:15' },
+    { courseCode: 'IT305L', type: 'practical', batch: 'A2', facultyId: preeti._id, startTime: '14:00', endTime: '16:00' },
+    { courseCode: 'IT306L', type: 'practical', batch: 'A1', facultyId: subriya._id, startTime: '14:00', endTime: '16:00' },
+    { courseCode: 'IT306L', type: 'practical', batch: 'A2', facultyId: subriya._id, startTime: '11:15', endTime: '13:15' },
     { courseCode: 'IT308', type: 'practical', batch: 'A1', facultyId: vaishali._id, startTime: '10:00', endTime: '12:00' },
     { courseCode: 'IT308', type: 'practical', batch: 'A2', facultyId: vaishali._id, startTime: '12:15', endTime: '14:15' },
   ]
