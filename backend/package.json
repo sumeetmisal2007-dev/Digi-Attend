@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon --env-file=.env src/index.js",
-    "start": "node --env-file=.env src/index.js",
-    "seed": "node --env-file=.env src/seed.js"
+    "start": "node src/index.js",
+    "seed": "node src/seed.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

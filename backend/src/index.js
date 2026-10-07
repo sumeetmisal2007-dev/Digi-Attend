@@ -1,3 +1,6 @@
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import express from 'express'
 import cors from 'cors'
 import crypto from 'crypto'
@@ -12,11 +15,19 @@ import { generateToken, validateToken } from './utils/qr.js'
 import { isWithinCampus, verifyCampusGeofence } from './utils/geo.js'
 import { authenticate, authorize } from './middleware/auth.js'
 
+// Automatically load local .env if present (without crashing if absent on Render)
+if (fs.existsSync('.env') && typeof process.loadEnvFile === 'function') {
+  try { process.loadEnvFile('.env') } catch {}
+}
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
 const app = express()
 
 // === TIER 1 SECURITY: HELMET HTTP SECURITY HEADERS ===
 app.use(helmet({
-  contentSecurityPolicy: false, // Permitted in local dev for Vite scripts and fonts
+  contentSecurityPolicy: false, // Permitted for Vite scripts and fonts
   crossOriginEmbedderPolicy: false,
   frameguard: { action: 'deny' }, // Anti-clickjacking protection
   dnsPrefetchControl: { allow: false },
@@ -30,11 +41,14 @@ const allowedOrigins = [
   'http://localhost:4000',
   'http://127.0.0.1:4000'
 ]
+if (process.env.CLIENT_URL) {
+  allowedOrigins.push(process.env.CLIENT_URL)
+}
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Permit non-browser agents (cURL, Postman, mobile PWA shell) and whitelisted origins
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Permit non-browser agents, same-origin, Render deployments, and whitelisted origins
+    if (!origin || allowedOrigins.includes(origin) || (typeof origin === 'string' && origin.endsWith('.onrender.com'))) {
       return callback(null, true)
     }
     return callback(new Error(`CORS policy blocked access from origin: ${origin}`))
@@ -1213,9 +1227,23 @@ app.delete('/api/students/:id', authenticate, authorize(['admin']), validateObje
   }
 })
 
-// === 404 CATCH-ALL FOR UNDEFINED API ROUTES ===
-app.use((req, res) => {
+// === PRODUCTION STATIC FRONTEND SERVING & SPA ROUTING ===
+const frontendDist = path.resolve(__dirname, '../../frontend/dist')
+app.use(express.static(frontendDist))
+
+// 404 catch-all specifically for unmatched API routes
+app.all('/api/*', (req, res) => {
   res.status(404).json({ error: `API route not found: ${req.method} ${req.originalUrl}` })
+})
+
+// Client-side routing fallback: serve index.html for all page routes
+app.get('*', (req, res) => {
+  const indexPath = path.join(frontendDist, 'index.html')
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath)
+  } else {
+    res.status(404).send('Digital Attendance server is running. Frontend build not found. Run npm run build.')
+  }
 })
 
 // === CENTRALIZED ERROR HANDLER ===
