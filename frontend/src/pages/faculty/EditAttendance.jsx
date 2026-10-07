@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { apiFetch } from '../../utils/api'
-import { CheckCircle2, AlertCircle, Save, Filter, Clock, Search, Users, Sparkles } from 'lucide-react'
+import { exportToCSV } from '../../utils/csvExport'
+import { CheckCircle2, AlertCircle, Save, Filter, Clock, Search, Users, Sparkles, Download } from 'lucide-react'
 
 export default function EditAttendance() {
   const { user } = useAuth()
@@ -137,6 +138,23 @@ export default function EditAttendance() {
   const totalCount = records.length
   const presentPercentage = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0
 
+  const handleExportCSV = () => {
+    if (!sessionData || !records.length) return
+    const exportRows = records.map((r, idx) => ({
+      'Sr No': idx + 1,
+      'Roll Number': r.roll_number,
+      'Student Name': r.name,
+      'Batch': r.batch || 'A1',
+      'Attendance Status': (r.status || 'ABSENT').toUpperCase(),
+      'Marked At': r.marked_at ? new Date(r.marked_at).toLocaleString() : 'Not Recorded',
+      'GPS Lat': r.scan_lat || '-',
+      'GPS Lng': r.scan_lng || '-'
+    }))
+    const cleanDate = (sessionData.session_date || 'session').replace(/[^a-zA-Z0-9]/g, '_')
+    const filename = `Attendance_${sessionData.course_code || 'Course'}_${cleanDate}_${sessionData.session_type || 'class'}`
+    exportToCSV(filename, exportRows)
+  }
+
   return (
     <>
       <div className="page-header" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
@@ -146,15 +164,26 @@ export default function EditAttendance() {
         </div>
 
         {records.length > 0 && (
-          <button
-            className="btn btn-primary"
-            onClick={handleSave}
-            disabled={saving || loadingRecords}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Save size={16} />
-            {saving ? 'Saving to Database...' : 'Save Changes'}
-          </button>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-secondary"
+              onClick={handleExportCSV}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              title="Download session attendance sheet as CSV for Microsoft Excel"
+            >
+              <Download size={16} />
+              Export CSV
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleSave}
+              disabled={saving || loadingRecords}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Save size={16} />
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
         )}
       </div>
 

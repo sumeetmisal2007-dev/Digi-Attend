@@ -244,6 +244,44 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
   }
 })
 
+// === USER CHANGE PASSWORD ENDPOINT ===
+app.post('/api/auth/change-password', authenticate, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current password and new password are required' })
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters long' })
+    }
+
+    const user = await User.findById(req.user.id)
+    if (!user) return res.status(404).json({ error: 'User account not found' })
+
+    let isMatch = false
+    try {
+      isMatch = bcrypt.compareSync(currentPassword, user.password)
+    } catch {
+      isMatch = false
+    }
+    if (!isMatch && currentPassword === user.password) {
+      isMatch = true
+    }
+
+    if (!isMatch) {
+      return res.status(400).json({ error: 'Current password does not match' })
+    }
+
+    user.password = bcrypt.hashSync(newPassword, 10)
+    await user.save()
+
+    res.json({ success: true, message: 'Password changed successfully! Please keep your new password safe.' })
+  } catch (err) {
+    console.error('Change password error:', err)
+    res.status(500).json({ error: 'Server error updating password' })
+  }
+})
+
 // === COURSES & FACULTY ENDPOINTS ===
 
 // Get all courses with assigned faculty
@@ -595,6 +633,26 @@ app.get('/api/sessions/:id/qr', authenticate, authorize(['faculty', 'hod', 'admi
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Server error loading session QR' })
+  }
+})
+
+// Close/End an active session (Faculty can close own session, HOD/Admin can close any)
+app.post('/api/sessions/:id/close', authenticate, authorize(['faculty', 'hod', 'admin']), validateObjectId, async (req, res) => {
+  try {
+    const session = await Session.findById(req.params.id)
+    if (!session) return res.status(404).json({ error: 'Session not found' })
+
+    if (req.user.role === 'faculty' && session.faculty_id.toString() !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied: You may only close sessions you conducted.' })
+    }
+
+    session.is_active = false
+    await session.save()
+
+    res.json({ success: true, message: 'Session successfully concluded. Attendance marking is now locked.' })
+  } catch (err) {
+    console.error('Close session error:', err)
+    res.status(500).json({ error: 'Server error closing session' })
   }
 })
 

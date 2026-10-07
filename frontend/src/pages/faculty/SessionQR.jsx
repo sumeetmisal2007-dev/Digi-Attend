@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { Clock, Users } from 'lucide-react'
+import { Clock, Users, Lock, ArrowRight, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 import { apiFetch } from '../../utils/api'
 
 export default function SessionQR() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [session, setSession] = useState(null)
   const [token, setToken] = useState(null)
   const [attendanceCount, setAttendanceCount] = useState(0)
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('')
   const [error, setError] = useState(null)
+  const [ending, setEnding] = useState(false)
 
   // Poll for new token and attendance count
   useEffect(() => {
@@ -21,8 +23,7 @@ export default function SessionQR() {
         setToken(data.token)
         setAttendanceCount(data.attendanceCount)
         
-        // Generate QR code image
-        // Format: session_id:token
+        // Generate QR code image format: session_id:token
         const qrContent = `${id}:${data.token}`
         const url = await QRCode.toDataURL(qrContent, { 
           width: 240,
@@ -47,6 +48,19 @@ export default function SessionQR() {
     return () => clearInterval(interval)
   }, [id])
 
+  const handleEndSession = async () => {
+    if (!window.confirm('Conclude this session?\n\nThis will deactivate the QR code so no more students can mark attendance.')) return
+
+    setEnding(true)
+    try {
+      await apiFetch(`/sessions/${id}/close`, { method: 'POST' })
+      navigate(`/faculty/attendance?sessionId=${id}`)
+    } catch (err) {
+      alert('Failed to close session: ' + err.message)
+      setEnding(false)
+    }
+  }
+
   if (error) {
     return <div className="page-header"><h1>Error</h1><p className="text-danger">{error}</p></div>
   }
@@ -63,8 +77,13 @@ export default function SessionQR() {
       <div className="page-header">
         <div>
           <h1>Session QR Code</h1>
-          <p>Display this QR code for students to scan</p>
+          <p>Display this dynamic rolling QR code on projector for students to scan</p>
         </div>
+        {session.is_active === false && (
+          <span className="badge badge-purple" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px' }}>
+            <Lock size={14} /> Session Concluded
+          </span>
+        )}
       </div>
 
       <div className="qr-display-placeholder">
@@ -85,25 +104,55 @@ export default function SessionQR() {
             </div>
           </div>
           <div className="qr-code-area">
-            {qrCodeDataUrl ? (
-              <img src={qrCodeDataUrl} alt="Session QR Code" style={{ width: 240, height: 240 }} />
+            {session.is_active === false ? (
+              <div style={{ width: 240, height: 240, background: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: '12px', border: '2px dashed #cbd5e1', padding: '16px', textAlign: 'center' }}>
+                <Lock size={40} style={{ color: '#64748b', marginBottom: '8px' }} />
+                <strong>Session Locked</strong>
+                <span style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>Attendance marking is closed</span>
+              </div>
+            ) : qrCodeDataUrl ? (
+              <img src={qrCodeDataUrl} alt="Session QR Code" style={{ width: 240, height: 240, borderRadius: '8px' }} />
             ) : (
               <div style={{ width: 240, height: 240, background: '#f1f5f9' }} />
             )}
-            <p>Scan to mark attendance</p>
-            <span className="text-muted">Refreshes in {secondsRemaining}s</span>
+            <p>{session.is_active === false ? 'Attendance closed' : 'Scan via Digi-Attend Student Portal'}</p>
+            {session.is_active !== false && (
+              <span className="text-muted">Dynamic token rotates in {secondsRemaining}s</span>
+            )}
           </div>
         </div>
 
         <div className="qr-sidebar-card card">
-          <h3><Users size={18} /> Attendance</h3>
+          <h3><Users size={18} /> Attendance Counter</h3>
           <div className="qr-attendance-count">
             <strong>{attendanceCount}</strong>
             <span>students scanned</span>
           </div>
-          <p className="text-muted" style={{ marginTop: 12 }}>
-            The counter updates automatically as students scan the code.
+          <p className="text-muted" style={{ marginTop: 12, fontSize: '13px' }}>
+            The counter updates in real time as students verify campus geofence and scan.
           </p>
+
+          <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {session.is_active !== false ? (
+              <button 
+                className="btn btn-primary" 
+                onClick={handleEndSession}
+                disabled={ending}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 600 }}
+              >
+                {ending ? <Loader2 size={16} className="animate-spin" /> : <Lock size={16} />}
+                {ending ? 'Concluding...' : 'End Class & Review Attendance'}
+              </button>
+            ) : null}
+
+            <Link 
+              to={`/faculty/attendance?sessionId=${id}`} 
+              className="btn btn-secondary"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textAlign: 'center' }}
+            >
+              View Full Student Roster <ArrowRight size={14} />
+            </Link>
+          </div>
         </div>
       </div>
     </>

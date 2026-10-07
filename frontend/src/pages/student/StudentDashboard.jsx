@@ -13,7 +13,7 @@ export default function StudentDashboard() {
     async function loadStats() {
       if (!user?.id) return
       try {
-        const res = await apiFetch(`/student/${user.id}/monthly-analysis?month=2026-09`)
+        const res = await apiFetch(`/student/${user.id}/monthly-analysis`)
         setData(res)
       } catch (err) {
         console.error('Failed to load student dashboard stats', err)
@@ -26,6 +26,7 @@ export default function StudentDashboard() {
 
   const overall = data?.overall
   const isDefaulter = overall?.isDefaulter
+  const monthName = data?.monthLabel || 'Current Month'
 
   return (
     <>
@@ -49,7 +50,7 @@ export default function StudentDashboard() {
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-top">
-            <span>September Attendance</span>
+            <span>{monthName} Attendance</span>
             <span className={`stat-icon ${isDefaulter ? 'danger' : 'success'}`}>
               {isDefaulter ? <AlertTriangle size={18} /> : <CheckCircle2 size={18} />}
             </span>
@@ -71,7 +72,7 @@ export default function StudentDashboard() {
             {loading ? '...' : `${overall?.attended}`}
           </strong>
           <p className="stat-detail">
-            {loading ? '...' : `out of ${overall?.total} conducted in Sep`}
+            {loading ? '...' : `out of ${overall?.total} conducted in ${monthName}`}
           </p>
         </div>
 

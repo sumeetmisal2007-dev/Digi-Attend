@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Users, BookOpen, AlertTriangle, CheckCircle2, Calendar, FileSpreadsheet, ShieldAlert, ArrowDown, FileDown, Send, MessageCircle } from 'lucide-react'
+import { Users, BookOpen, AlertTriangle, CheckCircle2, Calendar, FileSpreadsheet, ShieldAlert, ArrowDown, FileDown, Send, MessageCircle, Download } from 'lucide-react'
 import { apiFetch } from '../../utils/api'
 import { generateDefaulterPDF } from '../../utils/pdfGenerator'
+import { exportToCSV } from '../../utils/csvExport'
 import DefaulterAlertModal from '../../components/DefaulterAlertModal'
 
 export default function HodDashboard() {
@@ -29,6 +30,24 @@ export default function HodDashboard() {
     } finally {
       setGeneratingPdf(false)
     }
+  }
+
+  const handleExportCSV = () => {
+    if (!data?.allStudents?.length) return
+    const exportRows = data.allStudents.map((s, idx) => ({
+      'Sr No': idx + 1,
+      'Roll Number': s.roll_number,
+      'Student Name': s.name,
+      'Batch': s.batch || 'A1',
+      'Theory %': `${s.lecturePercentage}%`,
+      'Practical %': `${s.practicalPercentage}%`,
+      'Attended Sessions': s.attended,
+      'Total Sessions': s.total,
+      'Overall Attendance %': `${s.percentage}%`,
+      'Status': s.percentage < 75 ? 'DEFAULTER' : 'REGULAR'
+    }))
+    const cleanMonth = selectedMonth.replace(/[^a-zA-Z0-9]/g, '_')
+    exportToCSV(`Dept_Attendance_Report_${cleanMonth}`, exportRows)
   }
 
   useEffect(() => {
@@ -89,6 +108,17 @@ export default function HodDashboard() {
           >
             <FileDown size={16} />
             {generatingPdf ? 'Generating PDF...' : 'Create Defaulter PDF'}
+          </button>
+
+          <button
+            className="btn btn-secondary"
+            onClick={handleExportCSV}
+            disabled={!data || !data?.allStudents?.length}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 600, padding: '8px 14px' }}
+            title="Export full department attendance table to CSV"
+          >
+            <Download size={16} />
+            Export CSV
           </button>
 
           <button

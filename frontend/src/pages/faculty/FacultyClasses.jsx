@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
+import { PlusCircle, FileText } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { apiFetch } from '../../utils/api'
 
@@ -43,6 +45,7 @@ export default function FacultyClasses() {
                 <th>Semester</th>
                 <th>Year</th>
                 <th>Type</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -58,6 +61,24 @@ export default function FacultyClasses() {
                       <span className={`badge ${isPractical ? 'badge-purple' : 'badge-blue'}`}>
                         {isPractical ? 'Practical' : 'Lecture / Core'}
                       </span>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <div style={{ display: 'inline-flex', gap: '8px' }}>
+                        <Link 
+                          to="/faculty/session/new" 
+                          className="btn btn-secondary" 
+                          style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          <PlusCircle size={14} /> Start Session
+                        </Link>
+                        <Link 
+                          to="/faculty/attendance" 
+                          className="btn btn-secondary" 
+                          style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          <FileText size={14} /> Attendance
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 )
