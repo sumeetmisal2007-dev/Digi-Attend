@@ -84,7 +84,9 @@ export default function StudentDashboard() {
           <strong className="stat-value">
             {loading ? '...' : `${(data?.lectures?.length || 0) + (data?.practicals?.length || 0)}`}
           </strong>
-          <p className="stat-detail">7 Lectures & 7 Practicals</p>
+          <p className="stat-detail">
+            {loading ? '...' : `${data?.lectures?.length || 0} Lectures & ${data?.practicals?.length || 0} Practicals`}
+          </p>
         </div>
       </div>
 

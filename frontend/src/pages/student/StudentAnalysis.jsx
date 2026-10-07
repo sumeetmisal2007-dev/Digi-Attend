@@ -553,7 +553,7 @@ export default function StudentAnalysis() {
                   <BookOpen size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
                   Theory Lectures ({data.monthLabel})
                 </span>
-                <span className="text-muted">7 Subjects tracked separately</span>
+                <span className="text-muted">{data.lectures?.length || 0} Subjects tracked separately</span>
               </div>
               <span className="text-muted" style={{ fontWeight: 600, fontSize: '13px' }}>
                 Sub-total: {data.summary.lectureAttended}/{data.summary.lectureTotal} ({data.summary.lecturePercentage}%)
@@ -616,7 +616,7 @@ export default function StudentAnalysis() {
                   <FlaskConical size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
                   Practical Labs ({data.monthLabel})
                 </span>
-                <span className="text-muted">7 Labs tracked separately</span>
+                <span className="text-muted">{data.practicals?.length || 0} Labs tracked separately</span>
               </div>
               <span className="text-muted" style={{ fontWeight: 600, fontSize: '13px' }}>
                 Sub-total: {data.summary.practicalAttended}/{data.summary.practicalTotal} ({data.summary.practicalPercentage}%)

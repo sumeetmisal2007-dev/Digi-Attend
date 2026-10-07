@@ -8,10 +8,10 @@ import { Department, User, Course, Session, AttendanceRecord } from './models.js
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export async function seedDatabase(force = false) {
-  const hasRealERPData = await Course.findOne({ code: 'PCC304' })
+  const hasRealERPData = await Course.findOne({ code: 'ITC303' })
   if (!force && hasRealERPData) {
     const sessionCount = await Session.countDocuments()
-    if (sessionCount >= 90) return
+    if (sessionCount >= 160) return
   }
 
   console.log('Seeding MongoDB database with real ERP attendance data...')
@@ -93,8 +93,24 @@ export async function seedDatabase(force = false) {
     }
   }
 
-  // Exact real ERP course catalog matching the screenshots
+  // Exact real ERP course catalog matching the screenshots (13 subjects)
   await Course.create([
+    {
+      code: 'ITC303',
+      name: 'Database Management System',
+      department_id: dept._id,
+      year: 2,
+      semester: 3,
+      faculty_ids: [smita._id]
+    },
+    {
+      code: 'PCL304',
+      name: 'Linux and Shell Scripting Lab',
+      department_id: dept._id,
+      year: 2,
+      semester: 3,
+      faculty_ids: [dakshata._id]
+    },
     {
       code: 'PCC304',
       name: 'Operating System',
@@ -160,48 +176,24 @@ export async function seedDatabase(force = false) {
       faculty_ids: [hod._id]
     },
     {
-      code: 'IT301L',
-      name: 'Network Design Practical (Class Advisor)',
-      department_id: dept._id,
-      year: 2,
-      semester: 3,
-      faculty_ids: [sejal._id]
-    },
-    {
-      code: 'IT302L',
-      name: 'Linux Lab (OS Practical)',
-      department_id: dept._id,
-      year: 2,
-      semester: 3,
-      faculty_ids: [dakshata._id]
-    },
-    {
-      code: 'IT303',
-      name: 'Database Management System (DBMS)',
-      department_id: dept._id,
-      year: 2,
-      semester: 3,
-      faculty_ids: [smita._id]
-    },
-    {
-      code: 'IT304L',
-      name: 'ASL Lab (Applied Statistical Learning Practical)',
+      code: 'PCT301',
+      name: 'Applied Statistical Learning & AI Laboratory',
       department_id: dept._id,
       year: 2,
       semester: 3,
       faculty_ids: [sayali._id]
     },
     {
-      code: 'IT305L',
-      name: 'ED Lab (Entrepreneurship Development Practical)',
+      code: 'PCL302',
+      name: 'Network Design Lab',
       department_id: dept._id,
       year: 2,
       semester: 3,
-      faculty_ids: [preeti._id]
+      faculty_ids: [sejal._id]
     },
     {
       code: 'IT306',
-      name: 'Engineering for Sustainability (ES)',
+      name: 'Engineering for Sustainability',
       department_id: dept._id,
       year: 2,
       semester: 3,
@@ -213,16 +205,41 @@ export async function seedDatabase(force = false) {
   const courseMap = {}
   courses.forEach(c => { courseMap[c.code] = c })
 
-  // Real Subject configurations matching ERP screenshots:
-  // Operating System: 18 Lectures, 13 Present, 5 Absent
-  // Engineering for sustainability lab: 18 Practicals, 14 Present, 4 Absent
-  // Nirman Lab-III: 1 Practical, 0 Present, 1 Absent
-  // SQL Lab: 3 Practicals, 3 Present, 0 Absent
-  // Entrepreneurship Development: 19 Lectures, 13 Present, 6 Absent
-  // Open Elective: 8 Lectures, 4 Present, 4 Absent
-  // Applied Statistical Learning & AI: 11 Lectures, 9 Present, 2 Absent
-  // Computer Network and Network Design: 20 Lectures, 17 Present, 3 Absent
+  // Real Subject configurations matching Siddhesh ERP screenshots:
+  // 1. #ITC303 | Database Management System: 26 Lectures, 16 Present, 10 Absent (Ms. SMITA DESHMUKH)
+  // 2. #PCL304 | Linux and Shell Scripting Lab: 10 Practicals, 10 Present, 0 Absent (Ms. DAKSHATA ARGADE)
+  // 3. #PCC304 | Operating System: 18 Lectures, 13 Present, 5 Absent (Ms. DAKSHATA ARGADE)
+  // 4. #IT306L | Engineering for sustainability lab: 18 Practicals, 14 Present, 4 Absent (Dr. SUPRIYA BABAR)
+  // 5. #CEP301 | Nirman Lab-III: 1 Practical, 0 Present, 1 Absent (Dr. VAISHALI KHAIRNAR)
+  // 6. #IT303L | SQL Lab: 3 Practicals, 3 Present, 0 Absent (Ms. SMITA DESHMUKH)
+  // 7. #2993511 | Entrepreneurship Development: 19 Lectures, 13 Present, 6 Absent (Mrs. PREETI PATIL)
+  // 8. #OEC301 | Open Elective: 8 Lectures, 4 Present, 4 Absent (Mrs. SUMAN SARMA)
+  // 9. #PCC301 | Applied Statistical Learning & Artificial Intelligence: 11 Lectures, 9 Present, 2 Absent (Mrs. REKHA RATHORE)
+  // 10. #PCC302 | Computer Network and Network Design: 20 Lectures, 17 Present, 3 Absent (Dr. SUJATA KADU)
+  // 11. #PCT301 | Applied Statistical Learning & AI Laboratory: 9 Practicals, 7 Present, 2 Absent (Miss SAYALI JADHAV)
+  // 12. #PCL302 | Network Design Lab: 4 Practicals, 3 Present, 1 Absent (Miss. SEJAL JADHAV)
+  // 13. #IT306 | Engineering for Sustainability: 16 Lectures, 9 Present, 7 Absent (Dr. SUPRIYA BABAR)
   const realSubjectConfigs = [
+    {
+      code: 'ITC303',
+      faculty: smita,
+      type: 'lecture',
+      batch: 'all',
+      totalSessions: 26,
+      presentSessions: 16,
+      startTime: '10:00',
+      endTime: '11:00'
+    },
+    {
+      code: 'PCL304',
+      faculty: dakshata,
+      type: 'practical',
+      batch: 'all',
+      totalSessions: 10,
+      presentSessions: 10,
+      startTime: '14:00',
+      endTime: '16:00'
+    },
     {
       code: 'PCC304',
       faculty: dakshata,
@@ -302,6 +319,36 @@ export async function seedDatabase(force = false) {
       presentSessions: 17,
       startTime: '09:00',
       endTime: '10:00'
+    },
+    {
+      code: 'PCT301',
+      faculty: sayali,
+      type: 'practical',
+      batch: 'all',
+      totalSessions: 9,
+      presentSessions: 7,
+      startTime: '14:00',
+      endTime: '16:00'
+    },
+    {
+      code: 'PCL302',
+      faculty: sejal,
+      type: 'practical',
+      batch: 'all',
+      totalSessions: 4,
+      presentSessions: 3,
+      startTime: '14:00',
+      endTime: '16:00'
+    },
+    {
+      code: 'IT306',
+      faculty: subriya,
+      type: 'lecture',
+      batch: 'all',
+      totalSessions: 16,
+      presentSessions: 9,
+      startTime: '12:15',
+      endTime: '13:15'
     }
   ]
 
