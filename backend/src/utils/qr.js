@@ -26,8 +26,8 @@ export function validateToken(secret, token) {
 
   const tokenBuf = Buffer.from(token, 'utf8')
 
-  // Check current window (0) and previous window (1)
-  const candidateWindows = [0, 1]
+  // Check current window (0), previous 2 windows (1, 2 = up to 30s back), and future window (-1 for clock skew)
+  const candidateWindows = [0, 1, 2, -1]
 
   for (const offset of candidateWindows) {
     const candidate = generateToken(secret, offset)

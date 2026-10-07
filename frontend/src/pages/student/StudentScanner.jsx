@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { QrCode, MapPin, CheckCircle2, AlertTriangle, Loader2, Navigation, Compass, Sparkles, Smartphone, ShieldCheck, Lock } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { QrCode, MapPin, CheckCircle2, AlertTriangle, Loader2, Navigation, Compass, Sparkles, Smartphone, ShieldCheck, Lock, ExternalLink } from 'lucide-react'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import { useAuth } from '../../context/AuthContext'
 import { apiFetch } from '../../utils/api'
@@ -7,7 +8,9 @@ import { apiFetch } from '../../utils/api'
 function getOrCreateDeviceId() {
   let id = localStorage.getItem('attendance_device_id')
   if (!id) {
-    id = 'dev-' + (window.crypto?.randomUUID ? window.crypto.randomUUID() : Math.random().toString(36).substring(2, 10) + '-' + Date.now())
+    const screenSig = `${window.screen?.width || 0}x${window.screen?.height || 0}`
+    const rawUuid = window.crypto?.randomUUID ? window.crypto.randomUUID() : (Math.random().toString(36).substring(2, 10) + '-' + Date.now())
+    id = `dev-${screenSig}-${rawUuid.slice(0, 8)}`
     localStorage.setItem('attendance_device_id', id)
   }
   return id
@@ -31,6 +34,7 @@ export default function StudentScanner() {
   const [message, setMessage] = useState('')
   const [location, setLocation] = useState(null)
   const [isSimulated, setIsSimulated] = useState(false)
+  const [lastMarked, setLastMarked] = useState(null)
   const [campusInfo, setCampusInfo] = useState({
     name: 'Terna Engineering College, Nerul',
     campus_lat: 19.0330,
@@ -123,45 +127,62 @@ export default function StudentScanner() {
     setMessage('Point your camera at the dynamic QR code displayed on the screen')
     
     setTimeout(() => {
-      const scanner = new Html5QrcodeScanner("reader", { 
-        fps: 10, 
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0
-      }, false)
-      
-      scannerRef.current = scanner
+      try {
+        const scanner = new Html5QrcodeScanner("reader", { 
+          fps: 10, 
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0
+        }, false)
+        
+        scannerRef.current = scanner
 
-      scanner.render(async (decodedText) => {
-        scanner.clear()
-        scannerRef.current = null
-        handleScan(decodedText)
-      }, (error) => {
-        // ignore continuous scan search errors
-      })
+        scanner.render(async (decodedText) => {
+          try {
+            await scanner.clear()
+          } catch (e) {
+            console.warn('Scanner clear non-fatal', e)
+          }
+          scannerRef.current = null
+          handleScan(decodedText)
+        }, (error) => {
+          // ignore continuous scan search errors
+        })
+      } catch (err) {
+        console.error('Failed to init scanner', err)
+        setStatus('error')
+        setMessage('Camera error: Unable to start camera scanner. Please grant camera permissions.')
+      }
     }, 100)
   }
 
   useEffect(() => {
     return () => {
       if (scannerRef.current) {
-        scannerRef.current.clear().catch(e => console.error(e))
+        scannerRef.current.clear().catch(() => {})
+        scannerRef.current = null
       }
     }
   }, [])
 
   const handleScan = async (qrData) => {
     setStatus('processing')
-    setMessage('Verifying attendance, batch enrollment & single-device binding...')
+    setMessage('Verifying attendance, batch enrollment & registering in database...')
     
     try {
-      const [sessionId, token] = qrData.split(':')
+      if (!qrData || typeof qrData !== 'string') {
+        throw new Error('Invalid QR code data received. Please scan again.')
+      }
+
+      const parts = qrData.trim().split(':')
+      const sessionId = parts[0]?.trim()
+      const token = parts[1]?.trim()
       
       if (!sessionId || !token) {
         throw new Error('Invalid QR code format. Please scan a valid session QR.')
       }
 
       if (!location?.lat || !location?.lng) {
-        throw new Error('GPS coordinates not acquired. Please tap "Verify GPS & Open Scanner" first.')
+        throw new Error('GPS coordinates not acquired. Please verify your location first.')
       }
 
       const devId = getOrCreateDeviceId()
@@ -179,7 +200,13 @@ export default function StudentScanner() {
       })
 
       setStatus('success')
-      setMessage(res.message || 'Attendance successfully marked within campus geofence!')
+      setMessage(res.message || 'Attendance successfully registered in the database!')
+      setLastMarked({
+        courseName: res.course_name || 'Class',
+        courseCode: res.course_code || '',
+        sessionType: res.session_type || 'lecture',
+        markedAt: res.marked_at ? new Date(res.marked_at).toLocaleTimeString() : new Date().toLocaleTimeString()
+      })
     } catch (err) {
       console.error(err)
       setStatus('error')
@@ -309,11 +336,41 @@ export default function StudentScanner() {
           {status === 'success' && (
             <>
               <CheckCircle2 size={64} style={{ color: 'var(--success)' }} />
-              <h3 style={{ color: 'var(--success)' }}>Attendance Verified!</h3>
-              <p>{message}</p>
-              <button className="btn btn-primary" onClick={() => setStatus('idle')}>
-                Scan Another
-              </button>
+              <h3 style={{ color: 'var(--success)' }}>Attendance Registered in Database!</h3>
+              <p style={{ fontWeight: 600, color: 'var(--ink)' }}>{message}</p>
+              
+              {lastMarked && (
+                <div style={{ 
+                  background: '#f0fdf4', 
+                  border: '1px solid #bbf7d0', 
+                  borderRadius: '10px', 
+                  padding: '14px 20px', 
+                  margin: '16px auto', 
+                  maxWidth: '380px',
+                  textAlign: 'left'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <span style={{ color: '#166534', fontWeight: 700, fontSize: '13.5px' }}>
+                      {lastMarked.courseCode ? `${lastMarked.courseCode} — ` : ''}{lastMarked.courseName}
+                    </span>
+                    <span className="badge badge-purple" style={{ textTransform: 'capitalize', fontSize: '11px' }}>
+                      {lastMarked.sessionType}
+                    </span>
+                  </div>
+                  <div style={{ color: '#15803d', fontSize: '12.5px' }}>
+                    Status: <strong>PRESENT</strong> • Registered at {lastMarked.markedAt}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '12px' }}>
+                <button className="btn btn-primary" onClick={() => { setLastMarked(null); setStatus('idle') }}>
+                  Scan Another Class
+                </button>
+                <Link to="/student" className="btn" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  View Dashboard
+                </Link>
+              </div>
             </>
           )}
 
@@ -330,11 +387,13 @@ export default function StudentScanner() {
                   <button 
                     className="btn btn-primary" 
                     onClick={() => {
-                      toggleSimulation()
-                      setStatus('idle')
+                      const simCoords = { lat: 19.0330, lng: 73.0297, simulated: true }
+                      setLocation(simCoords)
+                      setIsSimulated(true)
+                      startScanner()
                     }}
                   >
-                    Simulate On-Campus GPS & Retry
+                    Simulate On-Campus GPS & Scan
                   </button>
                 )}
               </div>

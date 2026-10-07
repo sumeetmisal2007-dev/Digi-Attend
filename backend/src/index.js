@@ -24,6 +24,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const app = express()
+app.set('trust proxy', 1)
 
 // === TIER 1 SECURITY: HELMET HTTP SECURITY HEADERS ===
 app.use(helmet({
@@ -101,7 +102,8 @@ app.use('/api', apiLimiter)
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 30,
+  skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many failed login attempts. Account temporarily locked for 15 minutes to prevent brute-force attacks.' }
@@ -109,7 +111,8 @@ const loginLimiter = rateLimit({
 
 const scanLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 20,
+  max: 60,
+  keyGenerator: (req) => req.user?.id || req.ip,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Excessive attendance scan attempts detected. Please wait 1 minute before retrying.' }
@@ -394,8 +397,8 @@ app.get('/api/faculty/:id/dashboard', authenticate, authorize(['faculty', 'hod',
     const sessionIds = sessions.map(s => s._id)
 
     const totalSessions = sessions.length
-    // Current month sessions (e.g. 2026-09)
-    const currentMonth = '2026-09'
+    // Current month sessions (defaults to latest recorded session month or current calendar month)
+    const currentMonth = (sessions[0]?.session_date ? sessions[0].session_date.slice(0, 7) : new Date().toISOString().slice(0, 7))
     const monthSessions = sessions.filter(s => s.session_date && s.session_date.startsWith(currentMonth))
 
     // Total students in the department
@@ -416,6 +419,7 @@ app.get('/api/faculty/:id/dashboard', authenticate, authorize(['faculty', 'hod',
           course_code: s.course_id?.code,
           course_name: s.course_id?.name,
           session_type: s.session_type,
+          batch: s.batch || 'all',
           session_date: s.session_date,
           start_time: s.start_time,
           end_time: s.end_time,
@@ -461,6 +465,7 @@ app.get('/api/faculty/:id/sessions', authenticate, authorize(['faculty', 'hod', 
       course_code: s.course_id?.code,
       course_name: s.course_id?.name,
       session_type: s.session_type,
+      batch: s.batch || 'all',
       session_date: s.session_date,
       start_time: s.start_time,
       end_time: s.end_time,
@@ -718,19 +723,23 @@ app.post('/api/attendance/scan', scanLimiter, authenticate, authorize(['student'
 
     // 2. Single-Device Binding (Anti-Proxy Hardware Lock)
     const clientDevice = (device_id || device_fingerprint || '').trim()
-    if (clientDevice) {
-      if (!student.device_id) {
-        // Automatically bind student to this smartphone on first scan
-        student.device_id = clientDevice
-        student.device_name = req.headers['user-agent'] || 'Registered Device'
-        student.device_bound_at = new Date()
-        await student.save()
-      } else if (student.device_id !== clientDevice) {
-        return res.status(403).json({
-          error: 'Proxy Detection: Your account is locked to your registered smartphone. Attendance cannot be marked from another device.',
-          proxyViolation: true
-        })
-      }
+    if (!clientDevice) {
+      return res.status(400).json({
+        error: 'Security Alert: Device fingerprint is missing. Please scan from a registered smartphone.'
+      })
+    }
+
+    if (!student.device_id) {
+      // Automatically bind student to this smartphone on first scan
+      student.device_id = clientDevice
+      student.device_name = req.headers['user-agent'] || 'Registered Device'
+      student.device_bound_at = new Date()
+      await student.save()
+    } else if (student.device_id !== clientDevice) {
+      return res.status(403).json({
+        error: 'Proxy Detection: Your account is locked to your registered smartphone. Attendance cannot be marked from another device.',
+        proxyViolation: true
+      })
     }
 
     const numLat = Number(lat)
@@ -755,8 +764,9 @@ app.post('/api/attendance/scan', scanLimiter, authenticate, authorize(['student'
       return res.status(403).json({ error: 'Invalid or expired QR code. Please scan again.' })
     }
 
-    await AttendanceRecord.findOneAndUpdate(
-      { student_id, session_id },
+    // Persist and register attendance directly in MongoDB
+    const record = await AttendanceRecord.findOneAndUpdate(
+      { student_id: student._id, session_id: session._id },
       {
         status: 'present',
         scan_lat: numLat,
@@ -765,17 +775,22 @@ app.post('/api/attendance/scan', scanLimiter, authenticate, authorize(['student'
         device_fingerprint: clientDevice,
         marked_at: new Date()
       },
-      { upsert: true, new: true }
+      { upsert: true, new: true, setDefaultsOnInsert: true }
     )
 
     res.json({
       success: true,
-      message: 'Attendance marked successfully within campus geofence!',
-      deviceBound: !!student.device_id
+      message: `Attendance marked successfully for ${session.course_id?.name || 'Class'}!`,
+      deviceBound: !!student.device_id,
+      record_id: record._id,
+      marked_at: record.marked_at,
+      course_name: session.course_id?.name,
+      course_code: session.course_id?.code,
+      session_type: session.session_type
     })
   } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Server error' })
+    console.error('Scan attendance error:', err)
+    res.status(500).json({ error: 'Server error marking attendance' })
   }
 })
 
@@ -791,17 +806,14 @@ app.get('/api/student/:id/monthly-analysis', authenticate, validateObjectId, asy
       return res.status(404).json({ error: 'Student not found' })
     }
 
-    // Default to September 2026 if not specified
-    let selectedMonth = req.query.month || '2026-09'
-
     // Distinct available months in sessions
     const allSessionDates = await Session.distinct('session_date')
     const monthSet = new Set()
     allSessionDates.forEach(d => {
       if (d && d.length >= 7) monthSet.add(d.slice(0, 7))
     })
-    if (!monthSet.has('2026-09')) monthSet.add('2026-09')
-    if (!monthSet.has('2026-08')) monthSet.add('2026-08')
+    const currentISO = new Date().toISOString().slice(0, 7)
+    if (monthSet.size === 0) monthSet.add(currentISO)
 
     const availableMonths = Array.from(monthSet).sort().reverse().map(m => {
       const [year, mo] = m.split('-')
@@ -809,6 +821,9 @@ app.get('/api/student/:id/monthly-analysis', authenticate, validateObjectId, asy
       const label = dateObj.toLocaleString('en-US', { month: 'long', year: 'numeric' })
       return { value: m, label }
     })
+
+    // Default to query parameter or most recent available month
+    let selectedMonth = req.query.month || availableMonths[0]?.value || currentISO
 
     // Fetch sessions in selected month
     const sessionsInMonth = await Session.find({
@@ -931,8 +946,22 @@ app.get('/api/student/:id/monthly-analysis', authenticate, validateObjectId, asy
 // === HOD & FACULTY MONTHLY DEFAULTERS LIST ===
 app.get('/api/hod/monthly-defaulters', authenticate, authorize(['hod', 'admin']), async (req, res) => {
   try {
-    let selectedMonth = req.query.month || '2026-09'
     const threshold = Number(req.query.threshold) || 75
+
+    // Available months from recorded sessions
+    const allDates = await Session.distinct('session_date')
+    const monthSet = new Set()
+    allDates.forEach(d => { if (d && d.length >= 7) monthSet.add(d.slice(0, 7)) })
+    const currentISO = new Date().toISOString().slice(0, 7)
+    if (monthSet.size === 0) monthSet.add(currentISO)
+
+    const availableMonths = Array.from(monthSet).sort().reverse().map(m => {
+      const [year, mo] = m.split('-')
+      const label = new Date(Number(year), Number(mo) - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' })
+      return { value: m, label }
+    })
+
+    const selectedMonth = req.query.month || availableMonths[0]?.value || currentISO
 
     // Get all sessions in the selected month
     const sessions = await Session.find({
@@ -1012,19 +1041,6 @@ app.get('/api/hod/monthly-defaulters', authenticate, authorize(['hod', 'admin'])
     const avgOverall = studentRoster.length > 0
       ? Number((studentRoster.reduce((sum, s) => sum + s.percentage, 0) / studentRoster.length).toFixed(1))
       : 0
-
-    // Available months
-    const allDates = await Session.distinct('session_date')
-    const monthSet = new Set()
-    allDates.forEach(d => { if (d && d.length >= 7) monthSet.add(d.slice(0, 7)) })
-    if (!monthSet.has('2026-09')) monthSet.add('2026-09')
-    if (!monthSet.has('2026-08')) monthSet.add('2026-08')
-
-    const availableMonths = Array.from(monthSet).sort().reverse().map(m => {
-      const [year, mo] = m.split('-')
-      const label = new Date(Number(year), Number(mo) - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' })
-      return { value: m, label }
-    })
 
     const [y, m] = selectedMonth.split('-')
     const monthLabel = new Date(Number(y), Number(m) - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' })
