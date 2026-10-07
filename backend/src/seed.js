@@ -10,8 +10,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export async function seedDatabase(force = false) {
   const hasRealERPData = await Course.findOne({ code: 'ITC303' })
   if (!force && hasRealERPData) {
-    const sessionCount = await Session.countDocuments()
-    if (sessionCount >= 160) return
+    const sumeet = await User.findOne({ roll_number: 'TU4F2526039' })
+    if (sumeet) {
+      const sumeetPresentCount = await AttendanceRecord.countDocuments({ student_id: sumeet._id, status: 'present' })
+      if (sumeetPresentCount === 124) return
+    }
   }
 
   console.log('Seeding MongoDB database with real ERP attendance data...')
@@ -356,18 +359,74 @@ export async function seedDatabase(force = false) {
   const createdSessions = []
   const attendanceRecordsToInsert = []
 
-  // The 3 integrated students (Kamble Sanchi Maroti, Choudhari Siddhesh Dattatray, Misal Sumeet Ramesh)
-  const targetRollNumbers = new Set(['TU4F2526030', 'TU4F2526035', 'TU4F2526039'])
-  const targetNames = [
-    'KAMBLE SANCHI MAROTI',
-    'CHOUDHARI SIDDHESH DATTATRAY',
-    'MISAL SUMEET RAMESH'
-  ]
+  // Individual real present counts per student per course code from official college ERP summaries
+  const studentPresentCounts = {
+    // CHOUDHARI SIDDHESH DATTATRAY (Total: 118 / 163 = 72.39%)
+    'TU4F2526035': {
+      'PCC304': 13,
+      'PCT301': 7,
+      'PCC301': 9,
+      'PCC302': 17,
+      'IT306': 9,
+      'IT306L': 14,
+      '2993511': 13,
+      'PCL302': 3,
+      'CEP301': 0,
+      'OEC301': 4,
+      'IT303L': 3,
+      'ITC303': 16,
+      'PCL304': 10
+    },
+    // MISAL SUMEET RAMESH (Total: 124 / 163 = 76.07%)
+    'TU4F2526039': {
+      'PCC304': 14,
+      'PCT301': 8,
+      'PCC301': 9,
+      'PCC302': 19,
+      'IT306': 10,
+      'IT306L': 15,
+      '2993511': 13,
+      'PCL302': 3,
+      'CEP301': 0,
+      'OEC301': 4,
+      'IT303L': 2,
+      'ITC303': 19,
+      'PCL304': 8
+    },
+    // KAMBLE SANCHI MAROTI (Total: 121 / 163 = 74.23%)
+    'TU4F2526030': {
+      'PCC304': 14,
+      'PCT301': 6,
+      'PCC301': 9,
+      'PCC302': 17,
+      'IT306': 10,
+      'IT306L': 15,
+      '2993511': 14,
+      'PCL302': 3,
+      'CEP301': 1,
+      'OEC301': 5,
+      'IT303L': 2,
+      'ITC303': 16,
+      'PCL304': 9
+    }
+  }
 
-  const isTargetStudent = (student) => {
-    if (targetRollNumbers.has(student.roll_number?.trim().toUpperCase())) return true
+  const getStudentPresentTarget = (student, courseCode) => {
+    const roll = (student.roll_number || '').trim().toUpperCase()
+    if (studentPresentCounts[roll] && studentPresentCounts[roll][courseCode] !== undefined) {
+      return studentPresentCounts[roll][courseCode]
+    }
     const norm = (student.name || '').trim().toUpperCase()
-    return targetNames.some(t => norm.includes(t) || t.includes(norm))
+    if (norm.includes('CHOUDHARI') || norm.includes('SIDDHESH')) {
+      return studentPresentCounts['TU4F2526035']?.[courseCode]
+    }
+    if (norm.includes('MISAL') || norm.includes('SUMEET')) {
+      return studentPresentCounts['TU4F2526039']?.[courseCode]
+    }
+    if (norm.includes('KAMBLE') || norm.includes('SANCHI')) {
+      return studentPresentCounts['TU4F2526030']?.[courseCode]
+    }
+    return null
   }
 
   for (const config of realSubjectConfigs) {
@@ -393,14 +452,15 @@ export async function seedDatabase(force = false) {
       })
       createdSessions.push(session)
 
-      const isTargetPresent = sIdx < config.presentSessions
-
       allCreatedStudents.forEach((student) => {
-        if (isTargetStudent(student)) {
+        const presentTarget = getStudentPresentTarget(student, config.code)
+
+        if (presentTarget !== null && presentTarget !== undefined) {
+          const isPresent = sIdx < presentTarget
           attendanceRecordsToInsert.push({
             student_id: student._id,
             session_id: session._id,
-            status: isTargetPresent ? 'present' : 'absent',
+            status: isPresent ? 'present' : 'absent',
             scan_lat: dept.campus_lat,
             scan_lng: dept.campus_lng,
             device_fingerprint: `fp_${student.roll_number.toLowerCase()}`,
