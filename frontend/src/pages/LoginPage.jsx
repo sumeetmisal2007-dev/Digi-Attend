@@ -57,7 +57,7 @@ const PORTALS = {
     demo: {
       username: 'TUTF2526001',
       password: 'Tut@f2526001',
-      label: 'Dakshata Shinde (Operating System)'
+      label: 'Dakshata Argade (OS & Linux Lab)'
     },
     features: ['Dynamic Rotating QR Codes', 'Lecture & Lab Attendance', 'Student Headcount Tracker']
   },

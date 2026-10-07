@@ -8,14 +8,15 @@ import { Department, User, Course, Session, AttendanceRecord } from './models.js
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export async function seedDatabase(force = false) {
-  if (!force) {
+  const hasUpdatedFaculty = await User.findOne({ name: 'Dakshata Argade' })
+  if (!force && hasUpdatedFaculty) {
     const sessionCount = await Session.countDocuments()
     const facultyCount = await User.countDocuments({ role: { $in: ['faculty', 'hod'] } })
     const courseCount = await Course.countDocuments()
     if (sessionCount >= 50 && facultyCount >= 10 && courseCount >= 10) return
   }
 
-  console.log('Seeding MongoDB database...')
+  console.log('Seeding MongoDB database with updated faculty and course assignments...')
 
   await Promise.all([
     Department.deleteMany({}),
@@ -37,14 +38,14 @@ export async function seedDatabase(force = false) {
   const users = await User.create([
     { name: 'Dr. Sujata Kadu', roll_number: 'TU0F2526001', password: hashPw('Tu0@f2526001'), role: 'hod', department_id: dept._id },
     { name: 'Add 1', roll_number: 'TUADF2526001', password: hashPw('Tuad@f2526001'), role: 'admin', department_id: dept._id },
-    { name: 'Dakshata Shinde', roll_number: 'TUTF2526001', password: hashPw('Tut@f2526001'), role: 'faculty', department_id: dept._id },
+    { name: 'Dakshata Argade', roll_number: 'TUTF2526001', password: hashPw('Tut@f2526001'), role: 'faculty', department_id: dept._id },
     { name: 'Sejal Jadhav', roll_number: 'TUTF2526002', password: hashPw('Tut@f2526002'), role: 'faculty', department_id: dept._id },
     { name: 'Preeti Patil', roll_number: 'TUTF2526003', password: hashPw('Tut@f2526003'), role: 'faculty', department_id: dept._id },
     { name: 'Smita Deshmukh', roll_number: 'TUTF2526004', password: hashPw('Tut@f2526004'), role: 'faculty', department_id: dept._id },
     { name: 'Suman Sharma', roll_number: 'TUTF2526005', password: hashPw('Tut@f2526005'), role: 'faculty', department_id: dept._id },
     { name: 'Rekha Rathore', roll_number: 'TUTF2526006', password: hashPw('Tut@f2526006'), role: 'faculty', department_id: dept._id },
-    { name: 'Sayali More', roll_number: 'TUTF2526007', password: hashPw('Tut@f2526007'), role: 'faculty', department_id: dept._id },
-    { name: 'Dr. Subriya Babar', roll_number: 'TUTF2526008', password: hashPw('Tut@f2526008'), role: 'faculty', department_id: dept._id },
+    { name: 'Sayli Jadhav More', roll_number: 'TUTF2526007', password: hashPw('Tut@f2526007'), role: 'faculty', department_id: dept._id },
+    { name: 'Dr. Supriya Babar', roll_number: 'TUTF2526008', password: hashPw('Tut@f2526008'), role: 'faculty', department_id: dept._id },
     { name: 'Vaishali Khairnar', roll_number: 'TUTF2526009', password: hashPw('Tut@f2526009'), role: 'faculty', department_id: dept._id }
   ])
 
@@ -105,7 +106,7 @@ export async function seedDatabase(force = false) {
     },
     {
       code: 'IT301L',
-      name: 'Network Design Practical',
+      name: 'Network Design Practical (Class Advisor)',
       department_id: dept._id,
       year: 2,
       semester: 3,
@@ -113,7 +114,15 @@ export async function seedDatabase(force = false) {
     },
     {
       code: 'IT302',
-      name: 'Operating System',
+      name: 'Operating System (OS)',
+      department_id: dept._id,
+      year: 2,
+      semester: 3,
+      faculty_ids: [dakshata._id]
+    },
+    {
+      code: 'IT302L',
+      name: 'Linux Lab (OS Practical)',
       department_id: dept._id,
       year: 2,
       semester: 3,
@@ -128,8 +137,16 @@ export async function seedDatabase(force = false) {
       faculty_ids: [smita._id]
     },
     {
+      code: 'IT303L',
+      name: 'SQL Lab (DBMS Practical)',
+      department_id: dept._id,
+      year: 2,
+      semester: 3,
+      faculty_ids: [smita._id]
+    },
+    {
       code: 'IT304',
-      name: 'Applied Statistical Learning and Artificial Intelligence',
+      name: 'Applied Statistical Learning (ASL)',
       department_id: dept._id,
       year: 2,
       semester: 3,
@@ -137,7 +154,7 @@ export async function seedDatabase(force = false) {
     },
     {
       code: 'IT304L',
-      name: 'Applied Statistical Learning Practical',
+      name: 'ASL Lab (Applied Statistical Learning Practical)',
       department_id: dept._id,
       year: 2,
       semester: 3,
@@ -169,7 +186,7 @@ export async function seedDatabase(force = false) {
     },
     {
       code: 'IT308',
-      name: 'Nirman Practical',
+      name: 'Nirmaan Lab',
       department_id: dept._id,
       year: 2,
       semester: 3,
@@ -184,7 +201,7 @@ export async function seedDatabase(force = false) {
 
   // Define teaching session templates (Lectures and Practicals)
   const sessionTemplates = [
-    // 7 Theory Lectures (Separate)
+    // Theory Lectures
     { courseCode: 'IT301', type: 'lecture', facultyId: hod._id, startTime: '09:00', endTime: '10:00' },
     { courseCode: 'IT302', type: 'lecture', facultyId: dakshata._id, startTime: '10:00', endTime: '11:00' },
     { courseCode: 'IT303', type: 'lecture', facultyId: smita._id, startTime: '11:15', endTime: '12:15' },
@@ -193,12 +210,13 @@ export async function seedDatabase(force = false) {
     { courseCode: 'IT306', type: 'lecture', facultyId: subriya._id, startTime: '15:00', endTime: '16:00' },
     { courseCode: 'IT307', type: 'lecture', facultyId: suman._id, startTime: '16:00', endTime: '17:00' },
 
-    // 7 Practical Labs (with Batch A1 and A2 Divisions)
+    // Practical Labs (with Batch A1 and A2 Divisions)
     { courseCode: 'IT301L', type: 'practical', batch: 'A1', facultyId: sejal._id, startTime: '09:00', endTime: '11:00' },
     { courseCode: 'IT301L', type: 'practical', batch: 'A2', facultyId: sejal._id, startTime: '11:15', endTime: '13:15' },
-    { courseCode: 'IT302', type: 'practical', batch: 'A1', facultyId: dakshata._id, startTime: '11:15', endTime: '13:15' },
-    { courseCode: 'IT302', type: 'practical', batch: 'A2', facultyId: dakshata._id, startTime: '14:00', endTime: '16:00' },
-    { courseCode: 'IT303', type: 'practical', batch: 'all', facultyId: smita._id, startTime: '14:00', endTime: '16:00' },
+    { courseCode: 'IT302L', type: 'practical', batch: 'A1', facultyId: dakshata._id, startTime: '11:15', endTime: '13:15' },
+    { courseCode: 'IT302L', type: 'practical', batch: 'A2', facultyId: dakshata._id, startTime: '14:00', endTime: '16:00' },
+    { courseCode: 'IT303L', type: 'practical', batch: 'A1', facultyId: smita._id, startTime: '14:00', endTime: '16:00' },
+    { courseCode: 'IT303L', type: 'practical', batch: 'A2', facultyId: smita._id, startTime: '11:15', endTime: '13:15' },
     { courseCode: 'IT304L', type: 'practical', batch: 'A1', facultyId: sayali._id, startTime: '09:00', endTime: '11:00' },
     { courseCode: 'IT304L', type: 'practical', batch: 'A2', facultyId: sayali._id, startTime: '11:15', endTime: '13:15' },
     { courseCode: 'IT305', type: 'practical', batch: 'all', facultyId: preeti._id, startTime: '11:15', endTime: '13:15' },
