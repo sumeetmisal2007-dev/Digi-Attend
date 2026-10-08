@@ -63,7 +63,6 @@ export default function ThemeToggle({ variant = 'compact' }) {
     )
   }
 
-  // Full button pill variant (e.g. for login page or top headers)
   return (
     <div 
       style={{

@@ -8,7 +8,6 @@ export default function ManageStudents() {
   const [search, setSearch] = useState('')
   const [yearFilter, setYearFilter] = useState('all')
 
-  // Modals state
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingStudent, setEditingStudent] = useState(null)
   const [formData, setFormData] = useState({
@@ -21,9 +20,8 @@ export default function ManageStudents() {
   })
 
   const [saving, setSaving] = useState(false)
-  const [notification, setNotification] = useState(null) // { type: 'success'|'danger', text }
+  const [notification, setNotification] = useState(null) 
 
-  // Load students from DB
   const loadStudents = async () => {
     setLoading(true)
     try {
@@ -296,7 +294,7 @@ export default function ManageStudents() {
         )}
       </div>
 
-      {/* Add Student Modal */}
+      {}
       {isAddOpen && (
         <div style={modalOverlayStyle}>
           <div className="card" style={modalContentStyle}>
@@ -400,7 +398,7 @@ export default function ManageStudents() {
         </div>
       )}
 
-      {/* Edit Student Modal */}
+      {}
       {editingStudent && (
         <div style={modalOverlayStyle}>
           <div className="card" style={modalContentStyle}>
@@ -480,7 +478,7 @@ export default function ManageStudents() {
                 </div>
               </div>
 
-              {/* Hardware Lock Status & Reset Action */}
+              {}
               <div className="form-group" style={{ marginBottom: 0, background: 'var(--bg)', padding: '12px', borderRadius: '8px' }}>
                 <label style={{ fontSize: '12.5px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Hardware Binding (Anti-Proxy Lock)</label>
                 {editingStudent.device_id ? (

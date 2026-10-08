@@ -2,10 +2,6 @@ import crypto from 'crypto'
 
 const TOKEN_WINDOW_SECONDS = 15
 
-/**
- * Generate an HMAC-based rotating token that changes every 15 seconds.
- * Works like TOTP but using HMAC-SHA256 instead of HOTP.
- */
 export function generateToken(secret, offset = 0) {
   const timeWindow = Math.floor(Date.now() / (TOKEN_WINDOW_SECONDS * 1000)) - offset
   return crypto
@@ -15,10 +11,6 @@ export function generateToken(secret, offset = 0) {
     .slice(0, 16)
 }
 
-/**
- * Validate a scanned token against the session secret using timing-safe comparison.
- * Checks current time window AND adjacent window (to allow for minor clock skew).
- */
 export function validateToken(secret, token) {
   if (typeof secret !== 'string' || typeof token !== 'string' || token.length !== 16) {
     return false
@@ -26,7 +18,6 @@ export function validateToken(secret, token) {
 
   const tokenBuf = Buffer.from(token, 'utf8')
 
-  // Check current window (0), previous 2 windows (1, 2 = up to 30s back), and future window (-1 for clock skew)
   const candidateWindows = [0, 1, 2, -1]
 
   for (const offset of candidateWindows) {

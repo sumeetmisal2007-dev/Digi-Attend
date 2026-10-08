@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { QrCode, MapPin, CheckCircle2, AlertTriangle, Loader2, Navigation, Compass, Sparkles, Smartphone, ShieldCheck, Lock, ExternalLink } from 'lucide-react'
-import { Html5QrcodeScanner } from 'html5-qrcode'
+import { QrCode, MapPin, CheckCircle2, AlertTriangle, Loader2, Navigation, Compass, Sparkles, Smartphone, ShieldCheck, Lock, ExternalLink, SwitchCamera } from 'lucide-react'
+import { Html5Qrcode } from 'html5-qrcode'
 import { useAuth } from '../../context/AuthContext'
 import { apiFetch } from '../../utils/api'
 
@@ -16,7 +16,6 @@ function getOrCreateDeviceId() {
   return id
 }
 
-// Haversine distance in meters
 function computeDistance(lat1, lon1, lat2, lon2) {
   const R = 6371000
   const toRad = (deg) => (deg * Math.PI) / 180
@@ -30,21 +29,22 @@ function computeDistance(lat1, lon1, lat2, lon2) {
 
 export default function StudentScanner() {
   const { user } = useAuth()
-  const [status, setStatus] = useState('idle') // idle, locating, scanning, processing, success, error
+  const [status, setStatus] = useState('idle') 
   const [message, setMessage] = useState('')
   const [location, setLocation] = useState(null)
   const [isSimulated, setIsSimulated] = useState(false)
   const [lastMarked, setLastMarked] = useState(null)
+  const [facingMode, setFacingMode] = useState('environment') 
+  const [availableCameras, setAvailableCameras] = useState([])
   const [campusInfo, setCampusInfo] = useState({
     name: 'Terna Engineering College, Nerul',
-    campus_lat: 19.0330,
-    campus_lng: 73.0297,
-    campus_radius_m: 200
+    campus_lat: 19.0298,
+    campus_lng: 73.0166,
+    campus_radius_m: 500
   })
 
   const scannerRef = useRef(null)
 
-  // Fetch campus coordinates
   useEffect(() => {
     async function loadCampus() {
       try {
@@ -57,20 +57,17 @@ export default function StudentScanner() {
     loadCampus()
   }, [])
 
-  // Calculate live distance if location is set
   const currentDistance = location
     ? Math.round(computeDistance(location.lat, location.lng, campusInfo.campus_lat, campusInfo.campus_lng))
     : null
 
   const isInsideCampus = currentDistance !== null && currentDistance <= campusInfo.campus_radius_m
 
-  // Simulate on-campus location
   const toggleSimulation = () => {
     if (!isSimulated) {
-      // Simulate exact coordinates of Terna campus
       setLocation({
-        lat: 19.0330,
-        lng: 73.0297,
+        lat: 19.0298,
+        lng: 73.0166,
         simulated: true
       })
       setIsSimulated(true)
@@ -80,7 +77,107 @@ export default function StudentScanner() {
     }
   }
 
-  // Start the location + scanning process
+  const stopScanner = async () => {
+    if (scannerRef.current) {
+      try {
+        if (scannerRef.current.isScanning) {
+          await scannerRef.current.stop()
+        }
+        scannerRef.current.clear()
+      } catch (e) {
+        console.warn('Scanner cleanup warning:', e)
+      }
+      scannerRef.current = null
+    }
+  }
+
+  const startCameraScan = async (targetFacing = 'environment') => {
+    await stopScanner()
+
+    const readerEl = document.getElementById('reader')
+    if (!readerEl) {
+      setTimeout(() => startCameraScan(targetFacing), 60)
+      return
+    }
+
+    try {
+      const html5QrCode = new Html5Qrcode('reader')
+      scannerRef.current = html5QrCode
+
+      let cameras = availableCameras
+      if (!cameras || cameras.length === 0) {
+        try {
+          cameras = await Html5Qrcode.getCameras()
+          if (cameras && cameras.length > 0) {
+            setAvailableCameras(cameras)
+          }
+        } catch (e) {
+          console.warn('Could not list cameras', e)
+        }
+      }
+
+      let cameraConfig = null
+      if (cameras && cameras.length > 0) {
+        if (targetFacing === 'environment') {
+          const backCam = cameras.find(c => /back|rear|environment|wide|main/i.test(c.label))
+          cameraConfig = backCam ? backCam.id : (cameras.length > 1 ? cameras[cameras.length - 1].id : cameras[0].id)
+        } else {
+          const frontCam = cameras.find(c => /front|user|selfie/i.test(c.label))
+          cameraConfig = frontCam ? frontCam.id : cameras[0].id
+        }
+      }
+
+      if (!cameraConfig) {
+        cameraConfig = { facingMode: targetFacing }
+      }
+
+      const scanConfig = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0
+      }
+
+      await html5QrCode.start(
+        cameraConfig,
+        scanConfig,
+        async (decodedText) => {
+          await stopScanner()
+          handleScan(decodedText)
+        },
+        () => {
+        }
+      )
+    } catch (err) {
+      console.warn(`Camera start failed with ${targetFacing}, falling back to facingMode constraint:`, err)
+      try {
+        if (scannerRef.current && !scannerRef.current.isScanning) {
+          await scannerRef.current.start(
+            { facingMode: targetFacing },
+            { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+            async (decodedText) => {
+              await stopScanner()
+              handleScan(decodedText)
+            },
+            () => {}
+          )
+          return
+        }
+      } catch (fallbackErr) {
+        console.error('Camera fallback also failed', fallbackErr)
+        setStatus('error')
+        setMessage('Camera error: Unable to open camera. Please grant camera permissions in your browser.')
+      }
+    }
+  }
+
+  const flipCamera = async () => {
+    const nextFacing = facingMode === 'environment' ? 'user' : 'environment'
+    setFacingMode(nextFacing)
+    if (status === 'scanning') {
+      await startCameraScan(nextFacing)
+    }
+  }
+
   const startProcess = () => {
     if (isSimulated && location) {
       startScanner()
@@ -124,43 +221,16 @@ export default function StudentScanner() {
 
   const startScanner = () => {
     setStatus('scanning')
-    setMessage('Point your camera at the dynamic QR code displayed on the screen')
-    
+    setMessage('Point your rear camera at the dynamic QR code displayed on the screen')
+    setFacingMode('environment')
     setTimeout(() => {
-      try {
-        const scanner = new Html5QrcodeScanner("reader", { 
-          fps: 10, 
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0
-        }, false)
-        
-        scannerRef.current = scanner
-
-        scanner.render(async (decodedText) => {
-          try {
-            await scanner.clear()
-          } catch (e) {
-            console.warn('Scanner clear non-fatal', e)
-          }
-          scannerRef.current = null
-          handleScan(decodedText)
-        }, (error) => {
-          // ignore continuous scan search errors
-        })
-      } catch (err) {
-        console.error('Failed to init scanner', err)
-        setStatus('error')
-        setMessage('Camera error: Unable to start camera scanner. Please grant camera permissions.')
-      }
+      startCameraScan('environment')
     }, 100)
   }
 
   useEffect(() => {
     return () => {
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch(() => {})
-        scannerRef.current = null
-      }
+      stopScanner()
     }
   }, [])
 
@@ -229,7 +299,7 @@ export default function StudentScanner() {
           <span className="badge" style={{ padding: '6px 12px', fontSize: '12px', color: 'var(--ink-soft)', border: '1px solid var(--border)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
             <Lock size={12} /> Single-Device Lock
           </span>
-          {/* Localhost / Dev Simulation Button */}
+          {}
           <button 
             className={`btn ${isSimulated ? 'btn-primary' : ''}`}
             onClick={toggleSimulation}
@@ -240,7 +310,7 @@ export default function StudentScanner() {
         </div>
       </div>
 
-      {/* Geofence Status Radar Banner */}
+      {}
       <div 
         className="card" 
         style={{ 
@@ -310,7 +380,7 @@ export default function StudentScanner() {
             <>
               <QrCode size={64} style={{ opacity: 0.5 }} />
               <h3>Ready to Scan</h3>
-              <p>GPS coordinates will be validated against Terna Engineering College perimeter (200m).</p>
+              <p>GPS coordinates will be validated against Terna Engineering College perimeter ({campusInfo.campus_radius_m}m).</p>
               <button className="btn btn-primary" onClick={startProcess}>
                 Verify GPS & Start Scanner
               </button>
@@ -328,8 +398,38 @@ export default function StudentScanner() {
 
           {status === 'scanning' && (
             <div style={{ width: '100%', maxWidth: '400px', margin: '0 auto' }}>
-              <div id="reader" style={{ width: '100%' }}></div>
-              <p style={{ marginTop: 16 }}>{message}</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>
+                  {facingMode === 'environment' ? '📷 Rear Camera' : '🤳 Front Camera'}
+                </span>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={flipCamera}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}
+                  title="Switch Camera (Back / Front)"
+                >
+                  <SwitchCamera size={14} />
+                  Flip Camera
+                </button>
+              </div>
+              <div id="reader" style={{ width: '100%', borderRadius: '12px', overflow: 'hidden', background: '#000', minHeight: '280px' }}></div>
+              <p style={{ marginTop: 14, fontSize: '13px' }}>{message}</p>
+              <button 
+                className="btn" 
+                onClick={async () => { await stopScanner(); setStatus('idle'); }}
+                style={{ marginTop: '8px', fontSize: '12px' }}
+              >
+                Cancel Scan
+              </button>
             </div>
           )}
 
@@ -346,7 +446,7 @@ export default function StudentScanner() {
                   borderRadius: '10px', 
                   padding: '14px 20px', 
                   margin: '16px auto', 
-                  maxWidth: '380px',
+                  maxWidth: '380px', 
                   textAlign: 'left'
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
@@ -364,7 +464,7 @@ export default function StudentScanner() {
               )}
 
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '12px' }}>
-                <button className="btn btn-primary" onClick={() => { setLastMarked(null); setStatus('idle') }}>
+                <button className="btn btn-primary" onClick={async () => { await stopScanner(); setLastMarked(null); setStatus('idle'); }}>
                   Scan Another Class
                 </button>
                 <Link to="/student" className="btn" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -380,14 +480,14 @@ export default function StudentScanner() {
               <h3 style={{ color: 'var(--danger)' }}>Scan Denied</h3>
               <p style={{ maxWidth: '440px', margin: '0 auto', fontSize: '13px' }}>{message}</p>
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '16px' }}>
-                <button className="btn" onClick={() => setStatus('idle')}>
+                <button className="btn" onClick={async () => { await stopScanner(); setStatus('idle'); }}>
                   Try Again
                 </button>
                 {!isInsideCampus && (
                   <button 
                     className="btn btn-primary" 
                     onClick={() => {
-                      const simCoords = { lat: 19.0330, lng: 73.0297, simulated: true }
+                      const simCoords = { lat: 19.0298, lng: 73.0166, simulated: true }
                       setLocation(simCoords)
                       setIsSimulated(true)
                       startScanner()

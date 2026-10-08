@@ -1,7 +1,3 @@
-/**
- * Utility to export JavaScript array of objects to a downloadable CSV file.
- * Automatically escapes commas, newlines, and double quotes.
- */
 export function exportToCSV(filename, rows) {
   if (!rows || !rows.length) {
     alert('No data available to export.')

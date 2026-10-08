@@ -61,7 +61,6 @@ function RequireRole({ allowedRoles = [], children }) {
   if (!user) return <Navigate to="/login" replace />
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-    // Redirect to user's authorized portal if role does not match
     return <Navigate to={`/${user.role}`} replace />
   }
 
@@ -76,33 +75,33 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/login/:portalRole" element={<LoginPage />} />
 
-        {/* Student routes */}
+        {}
         <Route path="/student" element={<RequireRole allowedRoles={['student']}><AppLayout navItems={studentNav} /></RequireRole>}>
           <Route index element={<StudentDashboard />} />
           <Route path="analysis" element={<StudentAnalysis />} />
           <Route path="scan" element={<StudentScanner />} />
         </Route>
 
-        {/* Faculty routes */}
+        {}
         <Route path="/faculty" element={<RequireRole allowedRoles={['faculty', 'hod', 'admin']}><AppLayout navItems={facultyNav} /></RequireRole>}>
           <Route index element={<FacultyDashboard />} />
           {sharedClassRoutes}
         </Route>
 
-        {/* HOD routes */}
+        {}
         <Route path="/hod" element={<RequireRole allowedRoles={['hod', 'admin']}><AppLayout navItems={hodNav} /></RequireRole>}>
           <Route index element={<HodDashboard />} />
           {sharedClassRoutes}
         </Route>
 
-        {/* Admin routes */}
+        {}
         <Route path="/admin" element={<RequireRole allowedRoles={['admin']}><AppLayout navItems={adminNav} /></RequireRole>}>
           <Route index element={<AdminDashboard />} />
           <Route path="students" element={<ManageStudents />} />
           <Route path="courses" element={<ManageCourses />} />
         </Route>
 
-        {/* Catch-all */}
+        {}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

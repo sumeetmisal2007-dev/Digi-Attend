@@ -71,7 +71,7 @@ export default function DefaulterAlertModal({ isOpen, onClose, monthLabel, defau
           </div>
         )}
 
-        {/* Action Controls */}
+        {}
         <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
           <button
             type="button"
@@ -95,7 +95,7 @@ export default function DefaulterAlertModal({ isOpen, onClose, monthLabel, defau
           </button>
         </div>
 
-        {/* Defaulter Roster List */}
+        {}
         <div style={{ maxHeight: '340px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px' }}>
           <table className="data-table" style={{ margin: 0 }}>
             <thead>

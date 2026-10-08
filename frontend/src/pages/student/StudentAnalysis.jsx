@@ -24,8 +24,7 @@ export default function StudentAnalysis() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // Simulator State
-  const [simMode, setSimMode] = useState('subject') // 'subject' or 'day'
+  const [simMode, setSimMode] = useState('subject') 
   const [selectedItemKey, setSelectedItemKey] = useState('')
   const [missCount, setMissCount] = useState(1)
   const [missDays, setMissDays] = useState(1)
@@ -49,7 +48,6 @@ export default function StudentAnalysis() {
     loadAnalysis()
   }, [user, selectedMonth])
 
-  // Combine lectures and practicals into a unified options list for the simulator
   const allItems = [
     ...(data?.lectures || []).map(l => ({ ...l, itemKey: `lecture_${l.code}`, category: 'Lecture' })),
     ...(data?.practicals || []).map(p => ({ ...p, itemKey: `practical_${p.code}`, category: 'Practical' }))
@@ -57,11 +55,10 @@ export default function StudentAnalysis() {
 
   const currentSelectedItem = allItems.find(item => item.itemKey === selectedItemKey) || allItems[0]
 
-  // === CALCULATIONS: SUBJECT/PRACTICAL MODE ===
   const subjAttended = currentSelectedItem?.attended || 0
   const subjTotal = currentSelectedItem?.total || 0
   const projSubjTotal = subjTotal + missCount
-  const projSubjAttended = subjAttended // missed classes don't add to attended
+  const projSubjAttended = subjAttended 
   const projSubjPct = projSubjTotal > 0 ? Number(((projSubjAttended / projSubjTotal) * 100).toFixed(1)) : 0
   const subjDrop = Number(((currentSelectedItem?.percentage || 0) - projSubjPct).toFixed(1))
   const isSubjDefaulterNow = projSubjPct < 75
@@ -70,7 +67,6 @@ export default function StudentAnalysis() {
     : 0
   const subjSafeBunkBuffer = Math.max(0, Math.floor((subjAttended - 0.75 * subjTotal) / 0.75))
 
-  // Overall impact when missing `missCount` classes in chosen subject
   const currentOverallAttended = data?.overall?.attended || 0
   const currentOverallTotal = data?.overall?.total || 0
   const projOverallTotalFromSubj = currentOverallTotal + missCount
@@ -81,8 +77,6 @@ export default function StudentAnalysis() {
   const overallDropFromSubj = Number(((data?.overall?.percentage || 0) - projOverallPctFromSubj).toFixed(1))
   const isOverallDefaulterFromSubj = projOverallPctFromSubj < 75
 
-  // === CALCULATIONS: ENTIRE DAY LEAVE MODE ===
-  // Standard full day at Terna IT: 3 theory lectures + 1 practical session = 4 sessions
   const sessionsPerDay = 4
   const totalSessionsMissedDay = missDays * sessionsPerDay
   const projOverallTotalFromDay = currentOverallTotal + totalSessionsMissedDay
@@ -99,14 +93,14 @@ export default function StudentAnalysis() {
 
   return (
     <>
-      {/* Page Header & Month Selector */}
+      {}
       <div className="page-header" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h1>Monthly Attendance Analysis</h1>
           <p>Subject-wise breakdown of Theory Lectures and Practical Labs for the selected month</p>
         </div>
 
-        {/* Academic Month Dropdown Filter */}
+        {}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Calendar size={18} style={{ color: 'var(--primary)' }} />
           <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink-soft)' }}>
@@ -143,7 +137,7 @@ export default function StudentAnalysis() {
         </div>
       ) : (
         <>
-          {/* Overall Monthly Banner & Defaulter Check */}
+          {}
           <div className="card overall-banner" style={{ marginBottom: '24px' }}>
             <div>
               <span className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -180,7 +174,7 @@ export default function StudentAnalysis() {
             )}
           </div>
 
-          {/* Quick Metrics Comparison (Lecture vs Practical) */}
+          {}
           <div className="stats-grid four-col" style={{ marginBottom: '24px' }}>
             <div className="stat-card">
               <div className="stat-top">
@@ -225,9 +219,9 @@ export default function StudentAnalysis() {
             </div>
           </div>
 
-          {/* ========================================================= */}
-          {/* WHAT-IF ATTENDANCE & LEAVE IMPACT SIMULATOR (MONTH-WISE)  */}
-          {/* ========================================================= */}
+          {}
+          {}
+          {}
           <div className="simulator-panel">
             <div className="simulator-header">
               <div>
@@ -240,7 +234,7 @@ export default function StudentAnalysis() {
                 </p>
               </div>
 
-              {/* Toggle Mode: Single Subject/Practical vs Entire Day Leave */}
+              {}
               <div className="sim-toggle-group">
                 <button
                   type="button"
@@ -261,11 +255,11 @@ export default function StudentAnalysis() {
               </div>
             </div>
 
-            {/* --- MODE 1: SUBJECT / PRACTICAL LEAVE SIMULATOR --- */}
+            {}
             {simMode === 'subject' && (
               <div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', alignItems: 'flex-end', marginBottom: '16px' }}>
-                  {/* Select Subject or Practical */}
+                  {}
                   <div>
                     <label style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--ink)', display: 'block', marginBottom: '6px' }}>
                       Select Course / Practical Lab:
@@ -293,7 +287,7 @@ export default function StudentAnalysis() {
                     </select>
                   </div>
 
-                  {/* Stepper: Number of classes to miss */}
+                  {}
                   <div>
                     <label style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--ink)', display: 'block', marginBottom: '6px' }}>
                       How many sessions to miss?
@@ -318,7 +312,7 @@ export default function StudentAnalysis() {
                         </button>
                       </div>
 
-                      {/* Quick Chips */}
+                      {}
                       <div style={{ display: 'flex', gap: '6px' }}>
                         {[1, 2, 3, 4].map(n => (
                           <button
@@ -335,9 +329,9 @@ export default function StudentAnalysis() {
                   </div>
                 </div>
 
-                {/* Impact Results Cards */}
+                {}
                 <div className="impact-grid">
-                  {/* Subject Level Impact */}
+                  {}
                   <div className={`impact-card ${isSubjDefaulterNow ? 'danger' : 'safe'}`}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                       <div>
@@ -379,7 +373,7 @@ export default function StudentAnalysis() {
                     </div>
                   </div>
 
-                  {/* Overall Monthly Impact */}
+                  {}
                   <div className={`impact-card ${isOverallDefaulterFromSubj ? 'danger' : 'safe'}`}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                       <div>
@@ -424,7 +418,7 @@ export default function StudentAnalysis() {
               </div>
             )}
 
-            {/* --- MODE 2: ENTIRE DAY LEAVE SIMULATOR --- */}
+            {}
             {simMode === 'day' && (
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
@@ -452,7 +446,7 @@ export default function StudentAnalysis() {
                         </button>
                       </div>
 
-                      {/* Quick Chips */}
+                      {}
                       <div style={{ display: 'flex', gap: '6px' }}>
                         {[1, 2, 3, 5].map(d => (
                           <button
@@ -475,9 +469,9 @@ export default function StudentAnalysis() {
                   </div>
                 </div>
 
-                {/* Day Impact Cards */}
+                {}
                 <div className="impact-grid">
-                  {/* Projected Overall Attendance Card */}
+                  {}
                   <div className={`impact-card ${isOverallDefaulterFromDay ? 'danger' : 'safe'}`}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                       <div>
@@ -519,7 +513,7 @@ export default function StudentAnalysis() {
                     </div>
                   </div>
 
-                  {/* Monthly Leave Advisory Card */}
+                  {}
                   <div className="impact-card" style={{ background: '#f8fafc' }}>
                     <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--ink-soft)' }}>
                       Monthly Safety Allowance Advice
@@ -545,7 +539,7 @@ export default function StudentAnalysis() {
             )}
           </div>
 
-          {/* Section 1: Theory Lectures (Subject-Wise) */}
+          {}
           <div className="card" style={{ marginBottom: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -608,7 +602,7 @@ export default function StudentAnalysis() {
             </table>
           </div>
 
-          {/* Section 2: Practical Labs (Subject-Wise & Separate) */}
+          {}
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

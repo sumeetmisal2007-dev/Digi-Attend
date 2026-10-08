@@ -9,7 +9,7 @@ export default function HodDashboard() {
   const [selectedMonth, setSelectedMonth] = useState('2026-09')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [viewFilter, setViewFilter] = useState('defaulters') // 'defaulters' or 'all'
+  const [viewFilter, setViewFilter] = useState('defaulters') 
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false)
   const [generatingPdf, setGeneratingPdf] = useState(false)
 
@@ -75,7 +75,7 @@ export default function HodDashboard() {
           <p>Information Technology — Monthly attendance report, subject/practical tracking & defaulters roster</p>
         </div>
 
-        {/* Action Controls & Month Dropdown */}
+        {}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Calendar size={18} style={{ color: 'var(--primary)' }} />
@@ -153,7 +153,7 @@ export default function HodDashboard() {
         </div>
       ) : (
         <>
-          {/* Stats Grid */}
+          {}
           <div className="stats-grid four-col" style={{ marginBottom: '24px' }}>
             <div className="stat-card">
               <div className="stat-top">
@@ -196,7 +196,7 @@ export default function HodDashboard() {
             </div>
           </div>
 
-          {/* Monthly Defaulter List Table */}
+          {}
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '18px' }}>
               <div>
@@ -209,7 +209,7 @@ export default function HodDashboard() {
                 </p>
               </div>
 
-              {/* View Toggle */}
+              {}
               <div style={{ display: 'flex', gap: '6px' }}>
                 <button 
                   className={`btn btn-sm ${viewFilter === 'defaulters' ? 'btn-primary' : ''}`}
@@ -314,7 +314,7 @@ export default function HodDashboard() {
         </>
       )}
 
-      {/* 1-Click WhatsApp & Email Defaulter Warning Center */}
+      {}
       <DefaulterAlertModal
         isOpen={isAlertModalOpen}
         onClose={() => setIsAlertModalOpen(false)}

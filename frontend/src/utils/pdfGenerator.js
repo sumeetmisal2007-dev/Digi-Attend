@@ -1,10 +1,6 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
-/**
- * Generates an official, perfectly aligned PDF report for monthly attendance defaulters.
- * Formatted to Mumbai University & Terna Engineering College institutional standards.
- */
 export function generateDefaulterPDF({
   monthLabel = 'September 2026',
   defaulters = [],
@@ -20,18 +16,17 @@ export function generateDefaulterPDF({
 
   const pageWidth = doc.internal.pageSize.getWidth()
 
-  // 1. Header & College Letterhead
-  doc.setFillColor(15, 29, 47) // Navy #0f1d2f
+  doc.setFillColor(15, 29, 47) 
   doc.rect(0, 0, pageWidth, 5, 'F')
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(16)
-  doc.setTextColor(12, 74, 110) // #0c4a6e
+  doc.setTextColor(12, 74, 110) 
   doc.text('TERNA ENGINEERING COLLEGE', pageWidth / 2, 14, { align: 'center' })
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(8.5)
-  doc.setTextColor(71, 85, 105) // #475569
+  doc.setTextColor(71, 85, 105) 
   doc.text('Plot No. 12, Sector-22, Nerul, Navi Mumbai - 400706 | www.ternaengg.ac.in', pageWidth / 2, 19, { align: 'center' })
 
   doc.setFont('helvetica', 'bold')
@@ -43,18 +38,16 @@ export function generateDefaulterPDF({
   doc.setLineWidth(0.5)
   doc.line(14, 28, pageWidth - 14, 28)
 
-  // 2. Report Title & Subtitle Banner
-  doc.setFillColor(254, 242, 242) // Light red tint #fef2f2
+  doc.setFillColor(254, 242, 242) 
   doc.roundedRect(14, 31, pageWidth - 28, 12, 2, 2, 'F')
-  doc.setDrawColor(254, 202, 202) // #fecaca
+  doc.setDrawColor(254, 202, 202) 
   doc.roundedRect(14, 31, pageWidth - 28, 12, 2, 2, 'D')
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(10.5)
-  doc.setTextColor(185, 28, 28) // #b91c1c
+  doc.setTextColor(185, 28, 28) 
   doc.text(`OFFICIAL MONTHLY ATTENDANCE DEFAULTER LIST (< ${threshold}% ATTENDANCE)`, pageWidth / 2, 38.5, { align: 'center' })
 
-  // 3. Metadata Grid
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(8.5)
   doc.setTextColor(51, 65, 85)
@@ -67,7 +60,6 @@ export function generateDefaulterPDF({
   doc.text(`Dept Average Attendance: ${stats.deptAvgPercentage || 76.4}%`, 140, 48)
   doc.text(`Report Date: ${dateStr}`, 140, 53)
 
-  // 4. Defaulters Table
   const tableRows = defaulters.map((s, idx) => {
     return [
       idx + 1,
@@ -126,7 +118,6 @@ export function generateDefaulterPDF({
     },
     margin: { left: 14, right: 14 },
     didDrawPage: (data) => {
-      // Footer page numbering
       const str = `Page ${doc.internal.getNumberOfPages()}`
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(7.5)
@@ -136,7 +127,6 @@ export function generateDefaulterPDF({
     }
   })
 
-  // 5. Official Signature Blocks
   const finalY = doc.lastAutoTable.finalY + 18
   const signatureY = finalY > 260 ? 260 : finalY
 
@@ -144,7 +134,6 @@ export function generateDefaulterPDF({
   doc.setFontSize(8)
   doc.setTextColor(71, 85, 105)
 
-  // 3 Signature Columns
   const col1 = 20
   const col2 = 85
   const col3 = 150
@@ -152,12 +141,10 @@ export function generateDefaulterPDF({
   doc.setDrawColor(148, 163, 184)
   doc.setLineWidth(0.4)
 
-  // Lines
   doc.line(col1, signatureY, col1 + 45, signatureY)
   doc.line(col2, signatureY, col2 + 45, signatureY)
   doc.line(col3, signatureY, col3 + 45, signatureY)
 
-  // Text
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(30, 41, 59)
   doc.text('Class Advisor', col1 + 8, signatureY + 4)
@@ -171,7 +158,6 @@ export function generateDefaulterPDF({
   doc.text('Terna Engg College', col2 + 7, signatureY + 8)
   doc.text('Head of Department (IT)', col3 + 6, signatureY + 8)
 
-  // Save the PDF
   const cleanMonth = monthLabel.replace(/[^a-zA-Z0-9]/g, '_')
   const fileName = `Terna_IT_Defaulters_${cleanMonth}.pdf`
   doc.save(fileName)

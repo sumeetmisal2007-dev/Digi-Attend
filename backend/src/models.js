@@ -14,9 +14,9 @@ const schemaOptions = {
 
 export const Department = mongoose.model('Department', new mongoose.Schema({
   name: { type: String, required: true, unique: true },
-  campus_lat: { type: Number, required: true },
-  campus_lng: { type: Number, required: true },
-  campus_radius_m: { type: Number, default: 200 }
+  campus_lat: { type: Number, required: true, default: 19.0298 },
+  campus_lng: { type: Number, required: true, default: 73.0166 },
+  campus_radius_m: { type: Number, default: 500 }
 }, schemaOptions))
 
 export const User = mongoose.model('User', new mongoose.Schema({

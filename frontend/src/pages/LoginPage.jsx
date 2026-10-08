@@ -123,7 +123,6 @@ export default function LoginPage() {
   const [expectedRole, setExpectedRole] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  // Keep state in sync if URL route changes
   useEffect(() => {
     const fromParam = (portalRole || searchParams.get('role') || '').toLowerCase()
     if (PORTALS[fromParam] && fromParam !== activeRole) {
@@ -185,7 +184,7 @@ export default function LoginPage() {
         <ThemeToggle variant="pill" />
       </div>
       <div className="login-card-wide">
-        {/* Brand Header */}
+        {}
         <div className="login-brand" style={{ marginBottom: 20 }}>
           <img 
             src="/terna-logo.png" 
@@ -196,7 +195,7 @@ export default function LoginPage() {
           <p>Digital Attendance & Academic Monitoring System</p>
         </div>
 
-        {/* Portal Switcher Tabs */}
+        {}
         <div className="portal-nav-bar" role="tablist">
           {Object.values(PORTALS).map((portal) => {
             const Icon = portal.icon
@@ -216,7 +215,7 @@ export default function LoginPage() {
           })}
         </div>
 
-        {/* Dynamic Role Banner */}
+        {}
         <div 
           className="portal-banner"
           style={{ 
@@ -246,7 +245,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Login Form */}
+        {}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {error && (
             <div className="alert-banner danger" style={{ fontSize: '13px' }}>
@@ -313,7 +312,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Quick Demo Autofill Box */}
+        {}
         <div className="demo-credentials-box">
           <div className="demo-header">
             <span>Sample {currentPortal.tabLabel} Credentials:</span>

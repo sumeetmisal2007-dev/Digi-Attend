@@ -7,7 +7,6 @@ export default function ManageCourses() {
   const [facultyList, setFacultyList] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // Add modal state
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [formData, setFormData] = useState({
     code: '',
@@ -159,7 +158,7 @@ export default function ManageCourses() {
         )}
       </div>
 
-      {/* Add Course Modal */}
+      {}
       {isAddOpen && (
         <div style={modalOverlayStyle}>
           <div className="card" style={modalContentStyle}>

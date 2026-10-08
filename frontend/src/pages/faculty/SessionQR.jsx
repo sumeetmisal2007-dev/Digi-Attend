@@ -14,7 +14,6 @@ export default function SessionQR() {
   const [error, setError] = useState(null)
   const [ending, setEnding] = useState(false)
 
-  // Poll for new token and attendance count
   useEffect(() => {
     async function fetchSessionData() {
       try {
@@ -23,7 +22,6 @@ export default function SessionQR() {
         setToken(data.token)
         setAttendanceCount(data.attendanceCount)
         
-        // Generate QR code image format: session_id:token
         const qrContent = `${id}:${data.token}`
         const url = await QRCode.toDataURL(qrContent, { 
           width: 240,
@@ -40,10 +38,8 @@ export default function SessionQR() {
       }
     }
 
-    // Initial fetch
     fetchSessionData()
 
-    // Poll every 3 seconds to get fresh tokens and live attendance counts
     const interval = setInterval(fetchSessionData, 3000)
     return () => clearInterval(interval)
   }, [id])
@@ -69,7 +65,6 @@ export default function SessionQR() {
     return <div className="page-header"><h1>Loading session...</h1></div>
   }
 
-  // Calculate time remaining until next rotation (approximate for UI)
   const secondsRemaining = 15 - Math.floor((Date.now() / 1000) % 15)
 
   return (

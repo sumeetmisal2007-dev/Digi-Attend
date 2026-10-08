@@ -90,7 +90,7 @@ export default function StudentDashboard() {
         </div>
       </div>
 
-      {/* Monthly Analysis Action Card */}
+      {}
       <div className="card" style={{ marginTop: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>

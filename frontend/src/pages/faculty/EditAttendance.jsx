@@ -21,9 +21,8 @@ export default function EditAttendance() {
   const [loadingSessions, setLoadingSessions] = useState(true)
   const [loadingRecords, setLoadingRecords] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [feedback, setFeedback] = useState(null) // { type: 'success'|'danger', message }
+  const [feedback, setFeedback] = useState(null) 
 
-  // 1. Fetch sessions for this faculty
   useEffect(() => {
     async function loadSessions() {
       if (!user?.id) return
@@ -32,7 +31,6 @@ export default function EditAttendance() {
         const data = await apiFetch(`/faculty/${user.id}/sessions`)
         setSessions(data)
         if (data.length > 0) {
-          // If query param matches an existing session, use it, otherwise select first
           const matched = data.find(s => s.id === initialSessionId)
           setSelectedSessionId(matched ? matched.id : data[0].id)
         }
@@ -45,7 +43,6 @@ export default function EditAttendance() {
     loadSessions()
   }, [user, initialSessionId])
 
-  // 2. Load attendance records when selectedSessionId changes
   useEffect(() => {
     async function loadAttendance() {
       if (!selectedSessionId) {
@@ -91,7 +88,6 @@ export default function EditAttendance() {
     setSaving(true)
     setFeedback(null)
 
-    // Find records that changed compared to original
     const originalMap = new Map(originalRecords.map(r => [r.student_id, r.status]))
     const changed = records.filter(r => originalMap.get(r.student_id) !== r.status)
 
@@ -122,7 +118,6 @@ export default function EditAttendance() {
     }
   }
 
-  // Filter records
   const filteredRecords = records.filter(r => {
     const matchesSearch =
       r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -131,7 +126,6 @@ export default function EditAttendance() {
     return matchesSearch && matchesStatus
   })
 
-  // Live stats computed from current records state
   const presentCount = records.filter(r => r.status === 'present').length
   const absentCount = records.filter(r => r.status === 'absent').length
   const lateCount = records.filter(r => r.status === 'late').length
@@ -197,7 +191,7 @@ export default function EditAttendance() {
         </div>
       )}
 
-      {/* Session Selector Card */}
+      {}
       <div className="card" style={{ marginBottom: '20px' }}>
         <div className="form-row" style={{ alignItems: 'flex-end', marginBottom: 0 }}>
           <div className="form-group" style={{ flex: 2, marginBottom: 0 }}>
@@ -245,7 +239,7 @@ export default function EditAttendance() {
         </div>
       </div>
 
-      {/* Quick Session Summary Banner */}
+      {}
       {sessionData && (
         <div className="stats-grid four-col" style={{ marginBottom: '20px' }}>
           <div className="stat-card">
@@ -286,7 +280,7 @@ export default function EditAttendance() {
         </div>
       )}
 
-      {/* Students Attendance Table Card */}
+      {}
       <div className="card">
         {loadingRecords ? (
           <p style={{ padding: '32px 0', textAlign: 'center', color: 'var(--ink-soft)' }}>
@@ -298,7 +292,7 @@ export default function EditAttendance() {
           </p>
         ) : (
           <>
-            {/* Search and Filters Toolbar */}
+            {}
             <div className="table-toolbar" style={{ marginBottom: '16px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
               <div className="search-box" style={{ flex: 1, minWidth: '220px' }}>
                 <Search size={16} />

@@ -9,7 +9,7 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
   const [showCurrent, setShowCurrent] = useState(false)
   const [showNew, setShowNew] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [feedback, setFeedback] = useState(null) // { type: 'success' | 'danger', text: string }
+  const [feedback, setFeedback] = useState(null) 
 
   if (!isOpen) return null
 

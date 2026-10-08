@@ -29,9 +29,9 @@ export async function seedDatabase(force = false) {
 
   const dept = await Department.create({
     name: 'Information Technology',
-    campus_lat: 19.0330,
-    campus_lng: 73.0297,
-    campus_radius_m: 200
+    campus_lat: 19.0298,
+    campus_lng: 73.0166,
+    campus_radius_m: 500
   })
 
   const hashPw = (p) => bcrypt.hashSync(p, 10)
@@ -64,7 +64,6 @@ export async function seedDatabase(force = false) {
     vaishali
   ] = users
 
-  // Seed students from student_db.csv if available
   const csvPath = path.resolve(__dirname, '../../student_db.csv')
   const students = []
   if (fs.existsSync(csvPath)) {
@@ -77,7 +76,6 @@ export async function seedDatabase(force = false) {
         ? [match[1], match[2], match[3], match[4]] 
         : [match[0], match[1], match[2], match[3]]
       
-      // Batch A1: Roll no. 1-36, Batch A2: Roll no. 37-80
       const assignedBatch = i <= 36 ? 'A1' : 'A2'
 
       students.push({
@@ -96,7 +94,6 @@ export async function seedDatabase(force = false) {
     }
   }
 
-  // Exact real ERP course catalog matching the screenshots (13 subjects)
   await Course.create([
     {
       code: 'ITC303',
@@ -208,20 +205,6 @@ export async function seedDatabase(force = false) {
   const courseMap = {}
   courses.forEach(c => { courseMap[c.code] = c })
 
-  // Real Subject configurations matching Siddhesh ERP screenshots:
-  // 1. #ITC303 | Database Management System: 26 Lectures, 16 Present, 10 Absent (Ms. SMITA DESHMUKH)
-  // 2. #PCL304 | Linux and Shell Scripting Lab: 10 Practicals, 10 Present, 0 Absent (Ms. DAKSHATA ARGADE)
-  // 3. #PCC304 | Operating System: 18 Lectures, 13 Present, 5 Absent (Ms. DAKSHATA ARGADE)
-  // 4. #IT306L | Engineering for sustainability lab: 18 Practicals, 14 Present, 4 Absent (Dr. SUPRIYA BABAR)
-  // 5. #CEP301 | Nirman Lab-III: 1 Practical, 0 Present, 1 Absent (Dr. VAISHALI KHAIRNAR)
-  // 6. #IT303L | SQL Lab: 3 Practicals, 3 Present, 0 Absent (Ms. SMITA DESHMUKH)
-  // 7. #2993511 | Entrepreneurship Development: 19 Lectures, 13 Present, 6 Absent (Mrs. PREETI PATIL)
-  // 8. #OEC301 | Open Elective: 8 Lectures, 4 Present, 4 Absent (Mrs. SUMAN SARMA)
-  // 9. #PCC301 | Applied Statistical Learning & Artificial Intelligence: 11 Lectures, 9 Present, 2 Absent (Mrs. REKHA RATHORE)
-  // 10. #PCC302 | Computer Network and Network Design: 20 Lectures, 17 Present, 3 Absent (Dr. SUJATA KADU)
-  // 11. #PCT301 | Applied Statistical Learning & AI Laboratory: 9 Practicals, 7 Present, 2 Absent (Miss SAYALI JADHAV)
-  // 12. #PCL302 | Network Design Lab: 4 Practicals, 3 Present, 1 Absent (Miss. SEJAL JADHAV)
-  // 13. #IT306 | Engineering for Sustainability: 16 Lectures, 9 Present, 7 Absent (Dr. SUPRIYA BABAR)
   const realSubjectConfigs = [
     {
       code: 'ITC303',
@@ -359,9 +342,7 @@ export async function seedDatabase(force = false) {
   const createdSessions = []
   const attendanceRecordsToInsert = []
 
-  // Individual real present counts per student per course code from official college ERP summaries
   const studentPresentCounts = {
-    // CHOUDHARI SIDDHESH DATTATRAY (Total: 118 / 163 = 72.39%)
     'TU4F2526035': {
       'PCC304': 13,
       'PCT301': 7,
@@ -377,7 +358,6 @@ export async function seedDatabase(force = false) {
       'ITC303': 16,
       'PCL304': 10
     },
-    // MISAL SUMEET RAMESH (Total: 124 / 163 = 76.07%)
     'TU4F2526039': {
       'PCC304': 14,
       'PCT301': 8,
@@ -393,7 +373,6 @@ export async function seedDatabase(force = false) {
       'ITC303': 19,
       'PCL304': 8
     },
-    // KAMBLE SANCHI MAROTI (Total: 121 / 163 = 74.23%)
     'TU4F2526030': {
       'PCC304': 14,
       'PCT301': 6,
@@ -434,7 +413,6 @@ export async function seedDatabase(force = false) {
     if (!course) continue
 
     for (let sIdx = 0; sIdx < config.totalSessions; sIdx++) {
-      // Distribute dates evenly across September 2026 (skipping Sundays)
       const dayNum = 1 + Math.min(27, Math.floor((sIdx * 27) / Math.max(1, config.totalSessions - 1 || 1)))
       const dateStr = `2026-09-${String(dayNum).padStart(2, '0')}`
 
@@ -467,7 +445,6 @@ export async function seedDatabase(force = false) {
             marked_at: new Date(`${dateStr}T${config.startTime}:00Z`)
           })
         } else {
-          // Attendance for all other students is strictly 0 (all marked absent)
           attendanceRecordsToInsert.push({
             student_id: student._id,
             session_id: session._id,
@@ -492,7 +469,6 @@ export async function seedDatabase(force = false) {
   console.log(`Seeding complete: ${createdSessions.length} total ERP sessions created. Integrated students attendance configured accurately from ERP.`)
 }
 
-// Standalone execution: node src/seed.js
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   await connectDB()
   await seedDatabase(true)

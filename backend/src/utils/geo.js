@@ -1,9 +1,5 @@
-/**
- * Calculate distance between two GPS coordinates using the Haversine formula.
- * Returns distance in meters.
- */
 export function haversineDistance(lat1, lng1, lat2, lng2) {
-  const R = 6371000 // Earth's radius in meters
+  const R = 6371000 
   const toRad = (deg) => (deg * Math.PI) / 180
 
   const dLat = toRad(lat2 - lat1)
@@ -21,7 +17,7 @@ export function haversineDistance(lat1, lng1, lat2, lng2) {
 export const isWithinCampus = (studentLat, studentLng, campusLat, campusLng, radiusMeters) =>
   haversineDistance(studentLat, studentLng, campusLat, campusLng) <= radiusMeters
 
-export function verifyCampusGeofence(studentLat, studentLng, campusLat = 19.0330, campusLng = 73.0297, radiusMeters = 200) {
+export function verifyCampusGeofence(studentLat, studentLng, campusLat = 19.0298, campusLng = 73.0166, radiusMeters = 500) {
   const sLat = Number(studentLat)
   const sLng = Number(studentLng)
   const cLat = Number(campusLat)

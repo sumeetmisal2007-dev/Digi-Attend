@@ -2,10 +2,6 @@ import jwt from 'jsonwebtoken'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'terna-digital-attendance-secret-key-2026'
 
-/**
- * Middleware to verify JWT token from Authorization header.
- * Attaches decoded user payload to req.user.
- */
 export const authenticate = (req, res, next) => {
   const authHeader = req.headers.authorization || ''
   
@@ -36,10 +32,6 @@ export const authenticate = (req, res, next) => {
   }
 }
 
-/**
- * Middleware to enforce Role-Based Access Control (RBAC).
- * @param {string|string[]} roles - Single role or array of allowed roles (e.g. ['admin', 'hod'])
- */
 export const authorize = (roles = []) => {
   const allowed = Array.isArray(roles) ? roles : [roles]
 

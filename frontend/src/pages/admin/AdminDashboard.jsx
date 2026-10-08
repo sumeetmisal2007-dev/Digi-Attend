@@ -68,7 +68,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* System Status and Quick Actions */}
+      {}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginTop: '20px' }}>
         <div className="card">
           <h2 style={{ fontSize: '18px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>

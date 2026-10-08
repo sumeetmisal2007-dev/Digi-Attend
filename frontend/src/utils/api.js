@@ -16,7 +16,6 @@ export async function apiFetch(path, options = {}) {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
     
-    // Auto-logout on token expiration
     if (response.status === 401) {
       if (localStorage.getItem('token')) {
         localStorage.removeItem('token')

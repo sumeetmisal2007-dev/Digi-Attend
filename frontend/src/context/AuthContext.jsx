@@ -5,7 +5,6 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   
-  // Try to load user from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem('user')
     if (saved) {
